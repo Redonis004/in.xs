@@ -209,7 +209,7 @@ export default function UserProfile({ user, onUpdateUser }: UserProfileProps) {
   );
 
   return (
-    <div className="pb-32 relative bg-xs-black preserve-3d min-h-screen overflow-x-hidden">
+    <div className="relative bg-xs-black preserve-3d overflow-x-hidden">
       <style>{`
         .neural-editable::after {
           content: ''; position: absolute; inset: 0; pointer-events: none;
@@ -226,9 +226,8 @@ export default function UserProfile({ user, onUpdateUser }: UserProfileProps) {
       <TransactionModal isOpen={showTransferModal} onClose={() => setShowTransferModal(false)} onConfirm={(a) => alert(`Sent ${a}`)} recipientName={extendedProfile.username} recipientAvatar={extendedProfile.avatar} currentBalance={100} />
       <audio ref={anthemAudioRef} src={extendedProfile.anthemUrl} onEnded={() => setIsAnthemPlaying(false)} className="hidden" />
 
-      {/* Banner & Header with 3D Parallax */}
+      {/* Banner & Header */}
       <div className="relative h-[30vh] md:h-[40vh] overflow-hidden group/banner preserve-3d cursor-pointer">
-          {/* Parallax Image Layer */}
           <div className="absolute inset-[-20%] transition-transform duration-500 ease-out transform-gpu" 
                style={{ 
                  transform: `translateX(${mousePos.x * -1.5}px) translateY(${scrollPos * 0.15 + mousePos.y * -1.5}px) translateZ(${scrollPos * -0.05}px) rotateY(${mousePos.x * 0.04}deg) rotateX(${mousePos.y * -0.04}deg) scale(1.25)` 
@@ -237,7 +236,6 @@ export default function UserProfile({ user, onUpdateUser }: UserProfileProps) {
               <div className="absolute inset-0 spatial-glare opacity-0 group-hover/banner:opacity-100 transition-opacity duration-500"></div>
           </div>
           
-          {/* Floating Structural Grid Layer */}
           <div className="absolute inset-[-25%] structural-grid z-10 opacity-30 pointer-events-none transition-transform duration-500 ease-out transform-gpu" 
                style={{ 
                  transform: `translateX(${mousePos.x * 3}px) translateY(${scrollPos * 0.35 + mousePos.y * 3}px) translateZ(80px) rotateX(${15 + scrollPos * 0.01 + mousePos.y * 0.05}deg) rotateY(${mousePos.x * -0.05}deg)` 
@@ -256,7 +254,6 @@ export default function UserProfile({ user, onUpdateUser }: UserProfileProps) {
           </div>
       </div>
 
-      {/* Avatar Section */}
       <div className="relative -mt-20 md:-mt-24 flex flex-col items-center z-20 px-4 preserve-3d">
           <div className="preserve-3d transition-transform duration-500 ease-out" 
                style={{ transform: `rotateY(${mousePos.x * 1.8}deg) rotateX(${-mousePos.y * 1.8}deg) translateY(${scrollPos * -0.08}px)`, animation: 'profile-float 6s ease-in-out infinite' }}>
@@ -274,9 +271,7 @@ export default function UserProfile({ user, onUpdateUser }: UserProfileProps) {
           </div>
       </div>
 
-      {/* Profile Content */}
       <div className="px-6 space-y-16 max-w-5xl mx-auto mt-12 relative z-10 preserve-3d">
-          {/* Manifesto Section with AI Enhance */}
           <div className="space-y-8">
               <div className="flex items-center gap-4 px-6">
                 <ICONS.Rocket size={18} className="text-xs-purple animate-pulse" />
@@ -331,7 +326,6 @@ export default function UserProfile({ user, onUpdateUser }: UserProfileProps) {
               </div>
           </div>
 
-          {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <ProfileStatView icon={ICONS.Ruler} label="Verticality" value={member.height} />
               <ProfileStatView icon={ICONS.Activity} label="Morphology" value={member.bodyType} color="purple" />
@@ -339,7 +333,6 @@ export default function UserProfile({ user, onUpdateUser }: UserProfileProps) {
               <ProfileStatView icon={ICONS.MapPin} label="Zone" value={member.location || member.distance + 'mi'} color="yellow" />
           </div>
 
-          {/* Gallery */}
           <div className="space-y-8">
               <div className="flex items-center gap-4 px-6">
                 <ICONS.Camera size={18} className="text-gray-500" />

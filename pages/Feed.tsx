@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Card3D from '../components/Card3D';
 import ShareMenu from '../components/ShareMenu';
-import { ICONS, SAMPLE_POSTS } from '../constants';
+import { ICONS, SAMPLE_POSTS, APP_LOGO } from '../constants';
 import { User, Post, Report, MediaItem } from '../types';
 import { soundService } from '../services/soundService';
 import { chatWithUnhingedAI, synthesizeSpeech, getAiClient, decodeBase64, decodeAudioData, encodeBase64 } from '../services/geminiService';
@@ -450,7 +450,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: 'Grok Unhinged Response',
             artist: 'in.xs Neural AI',
-            artwork: [{ src: 'logo.png', sizes: '512x512', type: 'image/png' }]
+            artwork: [{ src: APP_LOGO, sizes: '512x512', type: 'image/svg+xml' }]
         });
     }
   };
@@ -512,7 +512,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
                 navigator.mediaSession.metadata = new MediaMetadata({
                     title: 'Live Neural Sync',
                     artist: 'Grok Unhinged',
-                    artwork: [{ src: 'logo.png', sizes: '512x512', type: 'image/png' }]
+                    artwork: [{ src: APP_LOGO, sizes: '512x512', type: 'image/svg+xml' }]
                 });
             }
           },
@@ -579,7 +579,8 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
         },
         config: {
           responseModalities: [Modality.AUDIO],
-          speechConfig: { voiceConfig: { voiceName: aiSettings.voice as any } },
+          // Fix: Wrap voiceName in prebuiltVoiceConfig per guidelines
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: aiSettings.voice as any } } },
           systemInstruction: `You are 'Grok Unhinged', the resident AI of [in.xs]. Personality: ${aiSettings.persona}. 
           CRITICAL: You are in a continuous voice conversation. Be snappy, concise, and witty. 
           Use community slang (tea, slay, period) but keep responses short so the conversation stays fast.
@@ -619,7 +620,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
   }, [grokHistory]);
 
   return (
-    <div className="space-y-12 relative pb-24 bg-xs-black min-h-screen">
+    <div className="space-y-12 relative">
       <style>{`
         @keyframes heart-burst {
           0% { transform: scale(1); }
@@ -644,7 +645,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
       `}</style>
       <header className="flex justify-between items-center px-4 pt-8 pb-4 relative z-20">
         <div className="flex items-center gap-4">
-            <img src="logo.png" className="w-12 h-12 object-contain drop-shadow-[0_0_10px_rgba(0,255,255,0.4)]" alt="logo" />
+            <img src={APP_LOGO} className="w-12 h-12 object-contain drop-shadow-[0_0_10px_rgba(0,255,255,0.4)]" alt="logo" />
             <h1 className="text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r from-xs-cyan via-xs-purple via-xs-pink to-xs-yellow tracking-tighter italic drop-shadow-[0_0_20px_rgba(0,255,255,0.3)]">
               SCENE.
             </h1>
@@ -967,7 +968,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
                            <label className="text-[10px] font-black text-gray-500 tracking-[0.4em] uppercase">Personality Engine</label>
                            <div className="grid grid-cols-2 gap-4">
                               {['Assertive', 'Flirty', 'Chaotic', 'Chill'].map(p => (
-                                <button key={p} onClick={() => setAiSettings({...aiSettings, persona: p})} className={`py-4 rounded-2xl border transition-all text-sm font-black uppercase tracking-widest ${aiSettings.persona === p ? 'bg-xs-purple text-white border-xs-purple' : 'bg-white/5 text-gray-500 border-white/10'}`}>
+                                <button key={p} onClick={() => setAiSettings({...aiSettings, persona: p})} className={`py-4 rounded-2xl border transition-all text-sm font-black uppercase tracking-widest ${aiSettings.persona === p ? 'bg-xs-purple text-white border-xs-purple' : 'bg-white/5 text-gray-600 border-white/10'}`}>
                                   {p}
                                 </button>
                               ))}

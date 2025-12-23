@@ -228,7 +228,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
   };
 
   return (
-    <div className="bg-xs-black min-h-screen relative overflow-x-hidden pb-32">
+    <div className="bg-xs-black relative overflow-x-hidden">
       <EditModal />
       <ShareMenu isOpen={showShareMenu} onClose={() => setShowShareMenu(false)} title="Share Identity" />
       <TopUpModal isOpen={showTopUpModal} onClose={() => setShowTopUpModal(false)} onSuccess={(a) => onUpdateUser({ walletBalance: user.walletBalance + a })} currentBalance={user.walletBalance} />
@@ -372,7 +372,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
                       {user.photos.map((photo, i) => (
                           <div key={i} className="aspect-[3/4] rounded-2xl overflow-hidden relative group border border-white/5">
                               <img src={photo} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/opacity-100 transition-opacity flex items-center justify-center gap-2">
                                   <button onClick={() => onUpdateUser({ photos: user.photos.filter((_, idx) => idx !== i) })} className="p-2 bg-white/10 rounded-full text-white hover:bg-red-500 hover:text-white transition-all"><ICONS.Trash2 size={14} /></button>
                               </div>
                           </div>

@@ -166,6 +166,13 @@ const Chat: React.FC<ChatProps> = ({ user, onReport, onUpdateUser }) => {
   const [callDuration, setCallDuration] = useState(0);
   const localVideoRef = useRef<HTMLVideoElement>(null);
 
+  // Sync camera feed to video element
+  useEffect(() => {
+      if (localStream && localVideoRef.current && callStatus !== 'idle') {
+          localVideoRef.current.srcObject = localStream;
+      }
+  }, [localStream, callStatus, callType]);
+
   const [oinks, setOinks] = useState<OinkItem[]>([
     { id: 101, name: 'MusclePig', time: '2 mins ago', avatar: 'https://picsum.photos/300/300?random=60', isOinkedBack: false, role: 'Top' },
     { id: 102, name: 'LeatherDad', time: '15 mins ago', avatar: 'https://picsum.photos/300/300?random=61', isOinkedBack: true, role: 'Top' },
@@ -359,11 +366,20 @@ const Chat: React.FC<ChatProps> = ({ user, onReport, onUpdateUser }) => {
     setCallType(type); setCallStatus('calling');
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
-        setLocalStream(stream); setTimeout(() => setCallStatus('connected'), 2500);
+        setLocalStream(stream); 
+        setTimeout(() => setCallStatus('connected'), 2500);
     } catch (err) { alert("Media access failed."); setCallStatus('idle'); }
   };
 
-  const endCall = () => { soundService.play('error'); if (localStream) localStream.getTracks().forEach(track => track.stop()); setLocalStream(null); setCallStatus('idle'); setIsMuted(false); setIsVideoOff(false); setCallDuration(0); };
+  const endCall = () => { 
+      soundService.play('error'); 
+      if (localStream) localStream.getTracks().forEach(track => track.stop()); 
+      setLocalStream(null); 
+      setCallStatus('idle'); 
+      setIsMuted(false); 
+      setIsVideoOff(false); 
+      setCallDuration(0); 
+  };
   const toggleMute = () => { soundService.play('click'); if (localStream) { localStream.getAudioTracks().forEach(track => track.enabled = !track.enabled); setIsMuted(!isMuted); } };
   const toggleVideo = () => { soundService.play('click'); if (localStream && callType === 'video') { localStream.getVideoTracks().forEach(track => track.enabled = !track.enabled); setIsVideoOff(!isVideoOff); } };
 

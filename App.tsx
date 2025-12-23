@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
-import { ICONS } from './constants';
+import { ICONS, APP_LOGO } from './constants';
 import { User, SubscriptionTier, Ethnicity, SexualRole, SexualPreference, HIVStatus, RelationshipStatus, Report } from './types';
 import { soundService } from './services/soundService';
 
@@ -86,7 +86,7 @@ const AgeGate: React.FC<{ onConfirm: () => void }> = ({ onConfirm }) => {
             <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-xs-cyan/20 rounded-full blur-[80px]"></div>
             
             <div className="mb-6 relative mx-auto w-32 h-32 animate-float" style={{ transform: 'translateZ(50px)' }}>
-                <img src="logo.png" className="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(189,0,255,0.6)]" alt="in.xs logo" />
+                <img src={APP_LOGO} className="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(189,0,255,0.6)]" alt="in.xs logo" />
             </div>
 
             <h1 className="text-4xl font-black text-white mb-3 uppercase italic tracking-tighter" style={{ transform: 'translateZ(30px)' }}>Biometric Access</h1>
@@ -278,7 +278,7 @@ export default function App() {
 
         <Navigation />
         
-        <main className="max-w-5xl mx-auto px-4 pt-6 relative z-10 pb-32 perspective-[2000px]">
+        <main className="max-w-5xl mx-auto px-4 pt-6 relative z-10 pb-40 perspective-[2000px]">
           <PageContainer>
             <Routes>
               <Route path="/" element={<Feed user={user} onReport={(r) => setReports([r, ...reports])} />} />
