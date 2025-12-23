@@ -1,0 +1,16 @@
+{
+  "name": "in.xs",
+  "description": "A vibrant, safety-focused, and cutting-edge social platform for the LGBTQ+ community featuring 3D aesthetics and AI-enhanced connections.",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
