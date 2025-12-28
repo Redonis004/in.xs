@@ -180,9 +180,14 @@ const PostMediaGallery = ({ media, username, userAvatar }: { media: MediaItem[],
 
 const NeuralOrb = ({ onClick, isLive, isThinking, isSpeaking }: { onClick: () => void, isLive: boolean, isThinking: boolean, isSpeaking: boolean }) => (
   <div className="relative group cursor-pointer perspective-[1000px]" onClick={onClick}>
-    <div className={`relative w-20 h-20 transition-all duration-700 ${isLive ? 'scale-110' : 'hover:scale-110'}`}>
-      <div className={`absolute inset-[-15px] rounded-full blur-2xl transition-all duration-1000 ${
-        isLive ? (isSpeaking ? 'bg-xs-pink/40 animate-pulse' : (isThinking ? 'bg-xs-purple/40 animate-pulse' : 'bg-xs-cyan/40 animate-pulse')) : 'bg-xs-cyan/5 group-hover:bg-xs-cyan/20'
+    <div className={`relative w-20 h-20 transition-all duration-700 transform-gpu ${isLive ? 'scale-110' : 'scale-100 group-hover:scale-110 active:scale-95'}`}>
+      {/* Reactive Glow Layer */}
+      <div className={`absolute inset-[-20px] rounded-full blur-3xl transition-all duration-500 ease-out ${
+        isLive 
+          ? (isSpeaking 
+              ? 'bg-xs-pink/60 scale-125 opacity-100 animate-pulse' 
+              : (isThinking ? 'bg-xs-purple/60 scale-110 opacity-80 animate-pulse' : 'bg-xs-cyan/40 opacity-70')) 
+          : 'bg-xs-cyan/5 opacity-0 group-hover:opacity-40 group-hover:bg-xs-cyan/30'
       }`}></div>
       
       <Card3D 
@@ -190,16 +195,17 @@ const NeuralOrb = ({ onClick, isLive, isThinking, isSpeaking }: { onClick: () =>
         variant="circle"
         className="w-full h-full"
         innerClassName="p-0 flex items-center justify-center bg-black/60 border-white/20 overflow-visible"
+        hoverZ={60}
       >
         <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-full">
             <div className={`absolute inset-0 transition-all duration-1000 ${isLive ? 'opacity-100' : 'opacity-20'} bg-gradient-to-tr from-xs-black via-xs-dark to-black`}></div>
             <div className={`absolute w-[80%] h-[80%] border border-xs-cyan/20 rounded-full transition-all duration-1000 ${isLive ? 'rotate-180 animate-spin-slow scale-110' : 'scale-90 opacity-0'}`}></div>
             <div className={`absolute w-[60%] h-[60%] border border-xs-purple/30 rounded-full transition-all duration-1000 ${isLive ? '-rotate-180 animate-spin-slow scale-125' : 'scale-90 opacity-0'}`} style={{animationDirection: 'reverse'}}></div>
 
-            <div className="relative z-10 transition-transform duration-500 group-hover:scale-125">
+            <div className={`relative z-10 transition-all duration-500 transform-gpu ${isSpeaking ? 'scale-125' : (isThinking ? 'scale-110' : 'group-hover:scale-115')}`}>
                {isLive ? (
                  isThinking ? <ICONS.Sparkles size={32} className="text-xs-purple animate-spin" /> : 
-                 (isSpeaking ? <ICONS.Volume2 size={32} className="text-xs-pink animate-bounce" /> : <ICONS.Mic size={32} className="text-xs-cyan animate-pulse" />)
+                 (isSpeaking ? <ICONS.Volume2 size={32} className="text-xs-pink drop-shadow-[0_0_15px_rgba(255,0,255,0.8)]" /> : <ICONS.Mic size={32} className="text-xs-cyan animate-pulse" />)
                ) : (
                  <ICONS.Zap size={32} className="text-xs-cyan group-hover:text-white transition-colors" />
                )}
@@ -208,10 +214,11 @@ const NeuralOrb = ({ onClick, isLive, isThinking, isSpeaking }: { onClick: () =>
             {isLive && !isThinking && (
               <div className="absolute bottom-4 flex gap-0.5 items-end h-6">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className={`w-1 bg-white/40 rounded-full animate-bounce`} style={{ 
-                    height: `${20 + Math.random() * 60}%`,
+                  <div key={i} className={`w-1 bg-white/40 rounded-full ${isSpeaking ? 'animate-bounce' : ''}`} style={{ 
+                    height: isSpeaking ? `${30 + Math.random() * 70}%` : '5px',
                     animationDelay: `${i * 0.1}s`,
-                    animationDuration: isSpeaking ? '0.4s' : '1s'
+                    animationDuration: isSpeaking ? '0.4s' : '1s',
+                    transition: 'height 0.1s ease-out'
                   }}></div>
                 ))}
               </div>
@@ -620,7 +627,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
   }, [grokHistory]);
 
   return (
-    <div className="space-y-12 relative">
+    <div className="space-y-12 relative px-4 pt-10">
       <style>{`
         @keyframes heart-burst {
           0% { transform: scale(1); }
@@ -643,7 +650,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
           100% { transform: scale(1.3); opacity: 0; }
         }
       `}</style>
-      <header className="flex justify-between items-center px-4 pt-8 pb-4 relative z-20">
+      <header className="flex justify-between items-center px-0 pb-4 relative z-20">
         <div className="flex items-center gap-4">
             <img src={APP_LOGO} className="w-12 h-12 object-contain drop-shadow-[0_0_10px_rgba(0,255,255,0.4)]" alt="logo" />
             <h1 className="text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r from-xs-cyan via-xs-purple via-xs-pink to-xs-yellow tracking-tighter italic drop-shadow-[0_0_20px_rgba(0,255,255,0.3)]">
@@ -675,7 +682,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
         </div>
       </header>
 
-      <div className="space-y-16 px-2">
+      <div className="space-y-16 px-0">
         {showCreatePost && (
             <div
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}

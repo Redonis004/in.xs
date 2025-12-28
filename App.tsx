@@ -151,7 +151,7 @@ const Navigation = () => {
     const centerX = nav.width / 2;
     const centerY = nav.height / 2;
     setNavRotate({
-      x: (y - centerY) / 20, // Subtler rotation
+      x: (y - centerY) / 20, 
       y: -(x - centerX) / 40,
     });
   };
@@ -159,7 +159,7 @@ const Navigation = () => {
   const handleMouseLeave = () => setNavRotate({ x: 0, y: 0 });
 
   return (
-    <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-2 preserve-3d">
+    <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 md:px-8 preserve-3d pointer-events-none">
         <nav 
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
@@ -167,7 +167,7 @@ const Navigation = () => {
               transform: `rotateX(${navRotate.x}deg) rotateY(${navRotate.y}deg)`,
               boxShadow: `0 20px 50px -10px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1)`
             }}
-            className="w-full max-w-4xl glass-panel h-20 rounded-[2.5rem] flex items-stretch justify-between px-2 transition-transform duration-500 ease-out border border-white/10 bg-black/60 backdrop-blur-xl preserve-3d overflow-visible"
+            className="w-full max-w-4xl glass-panel h-20 rounded-[2.5rem] flex items-stretch justify-between px-2 transition-transform duration-500 ease-out border border-white/10 bg-black/60 backdrop-blur-xl preserve-3d overflow-visible pointer-events-auto"
         >
             {navItems.map((item, i) => {
                 if (item.isCamera) {
@@ -201,7 +201,6 @@ const Navigation = () => {
                               >
                                   <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} className="relative z-10 drop-shadow-lg" />
                                   
-                                  {/* Active Holographic Effect */}
                                   {isActive && (
                                     <>
                                       <div className={`absolute inset-0 rounded-2xl blur-lg opacity-40 ${item.color.replace('text', 'bg')}`}></div>
@@ -234,7 +233,7 @@ const PageContainer = ({ children }: { children?: React.ReactNode }) => {
   }, [pathname]);
 
   return (
-    <div key={pathname} className="page-transition min-h-screen preserve-3d" ref={containerRef}>
+    <div key={pathname} className="page-transition preserve-3d" ref={containerRef}>
       {children}
     </div>
   );
@@ -278,7 +277,7 @@ export default function App() {
 
         <Navigation />
         
-        <main className="max-w-5xl mx-auto px-4 pt-6 relative z-10 pb-40 perspective-[2000px]">
+        <main className="max-w-5xl mx-auto relative z-10 pb-[104px] perspective-[2000px]">
           <PageContainer>
             <Routes>
               <Route path="/" element={<Feed user={user} onReport={(r) => setReports([r, ...reports])} />} />

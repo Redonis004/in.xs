@@ -148,7 +148,7 @@ const Members: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 relative">
+    <div className="space-y-6 relative px-4 pt-10">
       <style>{`
         .category-tile {
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);

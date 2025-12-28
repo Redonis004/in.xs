@@ -209,7 +209,7 @@ export default function UserProfile({ user, onUpdateUser }: UserProfileProps) {
   );
 
   return (
-    <div className="relative bg-xs-black preserve-3d overflow-x-hidden">
+    <div className="relative preserve-3d overflow-x-hidden">
       <style>{`
         .neural-editable::after {
           content: ''; position: absolute; inset: 0; pointer-events: none;

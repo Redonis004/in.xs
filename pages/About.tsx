@@ -37,9 +37,9 @@ const About: React.FC = () => {
   };
 
   return (
-    <div className="pb-24 space-y-6">
+    <div className="pb-24 space-y-6 px-4 pt-10">
        {/* Header */}
-       <div className="text-center space-y-2 pt-8">
+       <div className="text-center space-y-2 pt-0">
            <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-xs-purple via-white to-xs-cyan italic tracking-tighter uppercase">
                Core_Protocol
            </h1>

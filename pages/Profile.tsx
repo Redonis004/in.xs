@@ -228,7 +228,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
   };
 
   return (
-    <div className="bg-xs-black relative overflow-x-hidden">
+    <div className="relative">
       <EditModal />
       <ShareMenu isOpen={showShareMenu} onClose={() => setShowShareMenu(false)} title="Share Identity" />
       <TopUpModal isOpen={showTopUpModal} onClose={() => setShowTopUpModal(false)} onSuccess={(a) => onUpdateUser({ walletBalance: user.walletBalance + a })} currentBalance={user.walletBalance} />
@@ -419,7 +419,6 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
                       </button>
                   </div>
               </section>
-
           </div>
       </div>
     </div>
