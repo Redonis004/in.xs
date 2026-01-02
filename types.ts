@@ -150,6 +150,7 @@ export interface User {
   occupation?: string;
   kids?: string;
   lookingFor?: string[];
+  sexualLifestyle?: string;
   
   // App Props
   isVerified: boolean;
@@ -215,6 +216,7 @@ export interface Message {
   timestamp: number;
   isSystem?: boolean;
   reactions?: Record<string, number>;
+  isForwarded?: boolean;
 }
 
 export interface ChatRoom {

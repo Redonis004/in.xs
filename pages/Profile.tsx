@@ -13,8 +13,11 @@ import {
     PRONOUNS_OPTIONS,
     HAIR_COLORS,
     EYE_COLORS,
-    DIET_OPTIONS,
-    KIDS_OPTIONS
+    SEXUAL_PREFERENCE_OPTS,
+    MARRIED_OPTS,
+    PARTY_OPTS,
+    KINKS_OPTIONS,
+    SEXUAL_LIFESTYLE_OPTIONS
 } from '../constants';
 import { 
     User, 
@@ -22,13 +25,11 @@ import {
     FacialHair, 
     PowerDynamics, 
     HIVStatus, 
-    SexualPreference, 
     CumPreference, 
     Ethnicity, 
     LifestyleChoice, 
     SexualRole, 
     SubscriptionTier,
-    RelationshipStatus,
     EducationLevel
 } from '../types';
 import { soundService } from '../services/soundService';
@@ -172,6 +173,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
 
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [scrollPos, setScrollPos] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isAnthemPlaying, setIsAnthemPlaying] = useState(false);
@@ -188,7 +190,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
     age: member?.age || user?.age || 18,
     pronouns: member?.pronouns || user?.pronouns || 'He/Him',
     bio: member?.bio || user?.bio || '',
-    tags: member?.tags || user?.tags || [],
+    tags: member?.tags || user?.tags || ['#Hashtag'], // Default tag changed
     height: member?.height || user?.height || '',
     weight: member?.weight || user?.weight || '',
     bodyType: member?.bodyType || user?.bodyType || '',
@@ -201,24 +203,25 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
     dynamics: member?.dynamics || user?.dynamics || PowerDynamics.NEUTRAL,
     hivStatus: member?.hivStatus || user?.hivStatus || HIVStatus.NO_RESPONSE,
     lastTested: member?.lastTested || user?.lastTested || '',
-    sexualPreference: member?.sexualPreference || user?.sexualPreference || SexualPreference.NO_RESPONSE,
+    // Remapped Fields
+    preference: member?.sexualPreference || user?.sexualPreference || 'No Answer', // Was sexualPreference
     cumInAss: member?.cumInAss || user?.cumInAss || CumPreference.DONT_CARE,
     cumInMouth: member?.cumInMouth || user?.cumInMouth || '',
     ethnicity: member?.ethnicity || user?.ethnicity || Ethnicity.NO_RESPONSE,
     smoking: member?.smoking || user?.smoking || LifestyleChoice.NEVER,
     drinking: member?.drinking || user?.drinking || LifestyleChoice.SOMETIMES,
     marijuana: member?.marijuana || user?.marijuana || LifestyleChoice.NO_RESPONSE,
-    relationshipStatus: member?.relationshipStatus || user?.relationshipStatus || RelationshipStatus.NO_RESPONSE,
+    married: member?.relationshipStatus || user?.relationshipStatus || 'Single', // Was relationshipStatus/kids
+    party: member?.diet || user?.diet || 'Never', // Was diet
+    sexualLifestyle: member?.sexualLifestyle || user?.sexualLifestyle || '',
     education: member?.education || user?.education || EducationLevel.NO_RESPONSE,
-    occupation: member?.occupation || user?.occupation || '',
-    diet: member?.diet || user?.diet || '',
-    kids: member?.kids || user?.kids || '',
+    location: member?.location?.name || user?.location?.name || 'Unknown',
     intent: member?.intent || user?.intent || [],
     lookingFor: member?.lookingFor || user?.lookingFor || [],
     activities: member?.activities || user?.activities || [],
+    kinks: member?.kinks || user?.kinks || [],
     hosting: member?.hosting || user?.hosting || 'Negotiable',
     role: member?.role || user?.role || SexualRole.VERSE,
-    category: member?.category || user?.category || '',
     photos: member?.photos || user?.photos || [],
     videos: member?.videos || user?.videos || []
   });
@@ -258,6 +261,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
       intent: targetUser.intent || [],
       lookingFor: targetUser.lookingFor || [],
       activities: targetUser.activities || [],
+      kinks: targetUser.kinks || [],
       tags: targetUser.tags || [],
       pronouns: targetUser.pronouns || 'He/Him',
       category: targetUser.category || ''
@@ -278,7 +282,16 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
   };
 
   const handleSaveProfile = () => {
-    onUpdateUser(editData as any);
+    // Map back renamed fields to User type structure where necessary
+    const updatePayload: any = {
+        ...editData,
+        sexualPreference: editData.preference,
+        relationshipStatus: editData.married,
+        diet: editData.party,
+        location: { name: editData.location, lat: user?.location?.lat || 0, lng: user?.location?.lng || 0 }
+    };
+    
+    onUpdateUser(updatePayload);
     setIsEditingProfile(false);
     soundService.play('success');
   };
@@ -286,6 +299,44 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
   const handleCancelEdit = () => {
     setIsEditingProfile(false);
     soundService.play('lock');
+  };
+
+  const handleLocationSync = () => {
+      soundService.play('scan');
+      if ("geolocation" in navigator) {
+          navigator.geolocation.getCurrentPosition(async (position) => {
+              // In a real app, reverse geocode here. For now, show coordinates or dummy text.
+              const lat = position.coords.latitude.toFixed(4);
+              const lng = position.coords.longitude.toFixed(4);
+              setEditData(prev => ({...prev, location: `GPS: ${lat}, ${lng}`}));
+              soundService.play('success');
+          }, (error) => {
+              alert("GPS Access Denied");
+              soundService.play('error');
+          });
+      }
+  };
+
+  const handleDeleteAccount = () => {
+      if(confirm("Permanently delete account? This cannot be undone.")) {
+          soundService.play('trash');
+          // Trigger delete logic (prop needed or call API)
+          alert("Account deletion sequence initiated.");
+      }
+  };
+
+  const handleTakeBreak = () => {
+      if(confirm("Take a break? Your profile will be hidden for 7 days.")) {
+          soundService.play('lock');
+          alert("Account hibernating.");
+      }
+  };
+
+  const handleDeactivate = () => {
+      if(confirm("Deactivate account? You can reactivate by logging in.")) {
+          soundService.play('power');
+          alert("Account deactivated.");
+      }
   };
 
   const addTag = (e: React.KeyboardEvent) => {
@@ -304,7 +355,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
       soundService.play('trash');
   };
 
-  const toggleList = (item: string, field: 'intent' | 'lookingFor' | 'activities') => {
+  const toggleList = (item: string, field: 'intent' | 'lookingFor' | 'activities' | 'kinks') => {
       soundService.play('click');
       const list = editData[field];
       if (list.includes(item)) setEditData({ ...editData, [field]: list.filter(i => i !== item) });
@@ -338,7 +389,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
   const handleRemovePhoto = (index: number) => setEditData(prev => ({ ...prev, photos: prev.photos.filter((_, i) => i !== index) }));
   const handleRemoveVideo = (index: number) => setEditData(prev => ({ ...prev, videos: prev.videos.filter((_, i) => i !== index) }));
 
-  // Enhanced Colorful StatField Component
+  // Enhanced Colorful StatField Component with Dropdown Support
   const StatField = ({ 
       icon: Icon, 
       label, 
@@ -346,9 +397,10 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
       color = 'cyan', 
       fieldName, 
       options,
-      fullWidth = false 
+      fullWidth = false,
+      type = 'text'
   }: { 
-      icon: any, label: string, value: any, color?: string, fieldName?: keyof typeof editData, options?: string[], fullWidth?: boolean 
+      icon: any, label: string, value: any, color?: string, fieldName?: keyof typeof editData, options?: string[], fullWidth?: boolean, type?: string 
   }) => (
     <div className={`relative group p-4 rounded-2xl border transition-all duration-300 backdrop-blur-sm
         ${isEditingProfile 
@@ -378,10 +430,10 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
                 </select>
             ) : (
                 <input 
-                    type="text"
+                    type={type}
                     value={editData[fieldName] as string}
                     onChange={(e) => setEditData({ ...editData, [fieldName]: e.target.value })}
-                    className="w-full bg-transparent text-white font-bold text-sm outline-none border-b border-white/20 focus:border-xs-cyan py-1"
+                    className={`w-full bg-transparent text-white font-bold text-sm outline-none border-b border-white/20 focus:border-xs-cyan py-1 ${type === 'date' ? 'date-input-dark' : ''}`}
                 />
             )
         ) : (
@@ -407,18 +459,33 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
           
           <div className="absolute top-6 left-6 right-6 z-40 flex justify-between items-center">
               <button onClick={() => navigate(-1)} className="p-2.5 glass-panel rounded-xl text-white border-white/20"><ICONS.ArrowLeft size={18} /></button>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                   {isOwner && (
-                    <button 
-                        onClick={() => { isEditingProfile ? handleSaveProfile() : setIsEditingProfile(true); soundService.play('unlock'); }} 
-                        className={`px-4 py-2.5 rounded-xl transition-all border font-black uppercase text-[10px] tracking-widest flex items-center gap-2 ${isEditingProfile ? 'bg-xs-cyan text-black border-xs-cyan shadow-[0_0_20px_rgba(0,255,255,0.4)]' : 'glass-panel text-white border-white/20'}`}
-                    >
-                      {isEditingProfile ? <ICONS.Check size={14} /> : <ICONS.Edit3 size={14} />}
-                      {isEditingProfile ? 'SAVE_SYNC' : 'EDIT_ID'}
-                    </button>
+                    <>
+                        <button 
+                            onClick={() => { isEditingProfile ? handleSaveProfile() : setIsEditingProfile(true); soundService.play('unlock'); }} 
+                            className={`px-4 py-2.5 rounded-xl transition-all border font-black uppercase text-[10px] tracking-widest flex items-center gap-2 ${isEditingProfile ? 'bg-xs-cyan text-black border-xs-cyan shadow-[0_0_20px_rgba(0,255,255,0.4)]' : 'glass-panel text-white border-white/20'}`}
+                        >
+                        {isEditingProfile ? <ICONS.Check size={14} /> : <ICONS.Edit3 size={14} />}
+                        {isEditingProfile ? 'SAVE' : 'EDIT'}
+                        </button>
+                        
+                        <button onClick={handleDeleteAccount} className="p-2.5 glass-panel rounded-xl text-red-500 border-red-500/20 hover:bg-red-500/10" title="Delete Account">
+                            <ICONS.Trash2 size={16} />
+                        </button>
+                        <button onClick={handleTakeBreak} className="p-2.5 glass-panel rounded-xl text-xs-yellow border-xs-yellow/20 hover:bg-xs-yellow/10" title="Take a Break">
+                            <ICONS.Coffee size={16} />
+                        </button>
+                        <button onClick={handleDeactivate} className="p-2.5 glass-panel rounded-xl text-white border-white/20 hover:bg-white/10" title="Deactivate">
+                            <ICONS.Power size={16} />
+                        </button>
+                        <button onClick={() => { setShowSettingsModal(true); soundService.play('click'); }} className="p-2.5 glass-panel rounded-xl text-white border-white/20 hover:bg-white/10" title="Settings">
+                            <ICONS.Settings size={16} />
+                        </button>
+                    </>
                   )}
                   {isOwner && onSignOut && (
-                    <button onClick={() => { soundService.play('lock'); onSignOut(); }} className="p-2.5 glass-panel rounded-xl text-red-500 border-red-500/20 hover:bg-red-500/10">
+                    <button onClick={() => { soundService.play('lock'); onSignOut(); }} className="p-2.5 glass-panel rounded-xl text-gray-400 border-white/10 hover:bg-white/5" title="Sign Out">
                         <ICONS.LogOut size={16} />
                     </button>
                   )}
@@ -462,12 +529,12 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
 
       <div className="px-4 pb-32 space-y-8 max-w-5xl mx-auto relative z-10 mt-6">
           
-          {/* Identity & Manifesto (Purple Theme) */}
+          {/* Identity Section (Renamed from Identity_Matrix) */}
           <section className="space-y-4">
               <div className="flex items-center gap-3">
                   <div className="h-px flex-1 bg-gradient-to-r from-transparent to-xs-purple/50"></div>
                   <h3 className="text-xl font-black italic text-xs-purple uppercase tracking-tighter flex items-center gap-2">
-                      <ICONS.Fingerprint size={20} /> Identity_Matrix
+                      <ICONS.Fingerprint size={20} /> Identity
                   </h3>
                   <div className="h-px flex-1 bg-gradient-to-l from-transparent to-xs-purple/50"></div>
               </div>
@@ -495,7 +562,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
                       <div className="flex flex-wrap gap-2 mt-4">
                           {displayData.tags.map((tag: string) => (
                               <span key={tag} className="px-2 py-1 bg-xs-purple/10 border border-xs-purple/20 rounded-lg text-[8px] font-black text-gray-300 uppercase tracking-widest flex items-center gap-1">
-                                  #{tag}
+                                  {tag}
                                   {isEditingProfile && <button onClick={() => removeTag(tag)} className="text-red-500 hover:text-white"><ICONS.X size={8}/></button>}
                               </span>
                           ))}
@@ -505,7 +572,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
                                 value={tagInput}
                                 onChange={e => setTagInput(e.target.value)}
                                 onKeyDown={addTag}
-                                placeholder="+TAG" 
+                                placeholder="#HASHTAG" 
                                 className="px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-[8px] font-black text-white uppercase w-16 outline-none focus:border-xs-purple"
                               />
                           )}
@@ -514,15 +581,27 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
 
                   <div className="grid grid-cols-2 gap-3">
                       <StatField icon={ICONS.Fingerprint} label="Pronouns" value={displayData.pronouns} fieldName="pronouns" options={PRONOUNS_OPTIONS} color="purple" />
-                      <StatField icon={ICONS.Briefcase} label="Occupation" value={displayData.occupation} fieldName="occupation" color="purple" />
-                      <StatField icon={ICONS.MapPin} label="Location" value={user?.location?.name || "Unknown"} color="gray" />
+                      <div className="relative group p-4 rounded-2xl border transition-all duration-300 backdrop-blur-sm bg-xs-purple/5 border-xs-purple/20">
+                          <div className="flex justify-between items-start mb-2">
+                              <div className="p-2 rounded-lg bg-xs-purple/10 text-xs-purple mb-1 shadow-inner"><ICONS.MapPin size={16} /></div>
+                              <p className="text-[8px] font-black uppercase tracking-widest text-xs-purple/60">Location</p>
+                          </div>
+                          <div className="flex items-center justify-between">
+                              <p className="text-white font-bold text-sm truncate leading-tight">{displayData.location}</p>
+                              {isEditingProfile && (
+                                  <button onClick={handleLocationSync} className="p-1 bg-xs-cyan/20 text-xs-cyan rounded hover:bg-xs-cyan/40">
+                                      <ICONS.RefreshCw size={12} />
+                                  </button>
+                              )}
+                          </div>
+                      </div>
                       <StatField icon={ICONS.GraduationCap} label="Education" value={displayData.education} fieldName="education" options={Object.values(EducationLevel)} color="purple" />
-                      <StatField icon={ICONS.Heart} label="Status" value={displayData.relationshipStatus} fieldName="relationshipStatus" options={Object.values(RelationshipStatus)} color="purple" />
+                      <StatField icon={ICONS.Heart} label="Status" value={displayData.married} fieldName="married" options={MARRIED_OPTS} color="purple" />
                   </div>
               </div>
           </section>
 
-          {/* Physical Stats (Cyan Theme) */}
+          {/* Physical Specs (Category removed) */}
           <section className="space-y-4">
               <div className="flex items-center gap-3">
                   <div className="h-px flex-1 bg-gradient-to-r from-transparent to-xs-cyan/50"></div>
@@ -543,7 +622,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
               </div>
           </section>
 
-          {/* Sexual Profile (Pink Theme) */}
+          {/* Sexual Protocol (Protection -> Preference) */}
           <section className="space-y-4">
               <div className="flex items-center gap-3">
                   <div className="h-px flex-1 bg-gradient-to-r from-transparent to-xs-pink/50"></div>
@@ -554,24 +633,24 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <StatField icon={ICONS.Target} label="Role" value={displayData.role} fieldName="role" options={Object.values(SexualRole)} color="pink" />
-                  <StatField icon={ICONS.Zap} label="Endowment" value={displayData.endowment} fieldName="endowment" options={['Average', 'Large', 'Extra Large', 'Elite']} color="pink" />
+                  <StatField icon={ICONS.Zap} label="Dick Size" value={displayData.endowment} fieldName="endowment" options={['Average', 'Large', 'Extra Large', 'Elite']} color="pink" />
                   <StatField icon={ICONS.Scissors} label="Dick" value={displayData.dick} fieldName="dick" options={['Cut', 'Uncut']} color="pink" />
                   <StatField icon={ICONS.Activity} label="Dynamics" value={displayData.dynamics} fieldName="dynamics" options={Object.values(PowerDynamics)} color="pink" />
                   <StatField icon={ICONS.ShieldCheck} label="HIV Status" value={displayData.hivStatus} fieldName="hivStatus" options={Object.values(HIVStatus)} color="pink" />
-                  <StatField icon={ICONS.Calendar} label="Last Tested" value={displayData.lastTested} fieldName="lastTested" color="pink" />
-                  <StatField icon={ICONS.Lock} label="Protection" value={displayData.sexualPreference} fieldName="sexualPreference" options={Object.values(SexualPreference)} color="pink" />
+                  <StatField icon={ICONS.Calendar} label="Last Tested" value={displayData.lastTested} fieldName="lastTested" color="pink" type="date" />
+                  <StatField icon={ICONS.Lock} label="Preference" value={displayData.preference} fieldName="preference" options={SEXUAL_PREFERENCE_OPTS} color="pink" />
                   <StatField icon={ICONS.Droplets} label="Cum (Ass)" value={displayData.cumInAss} fieldName="cumInAss" options={Object.values(CumPreference)} color="pink" />
                   <StatField icon={ICONS.Droplet} label="Cum (Mouth)" value={displayData.cumInMouth} fieldName="cumInMouth" options={['Swallow', 'Spit', 'Gargle', 'No']} color="pink" />
                   <StatField icon={ICONS.Home} label="Hosting" value={displayData.hosting} fieldName="hosting" options={['Yes', 'No', 'Negotiable', 'Traveling']} color="pink" />
               </div>
           </section>
 
-          {/* Lifestyle (Yellow Theme) */}
+          {/* Lifestyle (Diet -> Party, Kids -> Married) */}
           <section className="space-y-4">
               <div className="flex items-center gap-3">
                   <div className="h-px flex-1 bg-gradient-to-r from-transparent to-xs-yellow/50"></div>
                   <h3 className="text-xl font-black italic text-xs-yellow uppercase tracking-tighter flex items-center gap-2">
-                      <ICONS.Coffee size={20} /> Lifestyle_Sync
+                      <ICONS.Coffee size={20} /> Lifestyle
                   </h3>
                   <div className="h-px flex-1 bg-gradient-to-l from-transparent to-xs-yellow/50"></div>
               </div>
@@ -579,8 +658,9 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
                   <StatField icon={ICONS.Cigarette} label="Smoking" value={displayData.smoking} fieldName="smoking" options={Object.values(LifestyleChoice)} color="yellow" />
                   <StatField icon={ICONS.Wine} label="Drinking" value={displayData.drinking} fieldName="drinking" options={Object.values(LifestyleChoice)} color="yellow" />
                   <StatField icon={ICONS.Leaf} label="420" value={displayData.marijuana} fieldName="marijuana" options={Object.values(LifestyleChoice)} color="yellow" />
-                  <StatField icon={ICONS.Leaf} label="Diet" value={displayData.diet} fieldName="diet" options={DIET_OPTIONS} color="yellow" />
-                  <StatField icon={ICONS.Baby} label="Kids" value={displayData.kids} fieldName="kids" options={KIDS_OPTIONS} color="yellow" />
+                  <StatField icon={ICONS.Leaf} label="Party" value={displayData.party} fieldName="party" options={PARTY_OPTS} color="yellow" />
+                  <StatField icon={ICONS.Heart} label="Married" value={displayData.married} fieldName="married" options={MARRIED_OPTS} color="yellow" />
+                  <StatField icon={ICONS.Activity} label="Lifestyle" value={displayData.sexualLifestyle} fieldName="sexualLifestyle" options={SEXUAL_LIFESTYLE_OPTIONS} color="yellow" />
               </div>
           </section>
 
@@ -625,16 +705,24 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
                               )) : displayData.activities.map((i: string) => <span key={i} className="px-3 py-1.5 bg-xs-pink/10 border border-xs-pink/20 rounded-xl text-[9px] font-black text-white uppercase">{i}</span>)}
                           </div>
                       </div>
+                      <div>
+                          <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-2">Kinks</span>
+                          <div className="flex flex-wrap gap-2">
+                              {isEditingProfile ? KINKS_OPTIONS.map(opt => (
+                                  <button key={opt} onClick={() => toggleList(opt, 'kinks')} className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border transition-all ${editData.kinks.includes(opt) ? 'bg-xs-purple text-white border-xs-purple' : 'bg-white/5 text-gray-500 border-white/10'}`}>{opt}</button>
+                              )) : displayData.kinks.map((i: string) => <span key={i} className="px-3 py-1.5 bg-xs-purple/10 border border-xs-purple/20 rounded-xl text-[9px] font-black text-white uppercase">{i}</span>)}
+                          </div>
+                      </div>
                   </div>
               </div>
           </div>
 
-          {/* Visuals */}
+          {/* Visuals (Renamed to Album) */}
           <div className="bg-black/40 border border-white/5 rounded-[2rem] p-6 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-xs-cyan/5 to-xs-purple/5 pointer-events-none"></div>
               <div className="flex items-center gap-3 mb-6 relative z-10">
                   <ICONS.Camera size={18} className="text-white" />
-                  <h3 className="text-[10px] font-black text-white uppercase tracking-[0.8em]">VAULT_VISUALS</h3>
+                  <h3 className="text-[10px] font-black text-white uppercase tracking-[0.8em]">Album</h3>
               </div>
               
               <MediaGrid 
@@ -656,10 +744,40 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
           {isEditingProfile && (
             <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex gap-3 animate-in slide-in-from-bottom-10 duration-500 w-full max-w-sm px-4">
                 <button onClick={handleCancelEdit} className="flex-1 py-4 bg-black/90 backdrop-blur-xl border border-white/20 text-gray-400 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl hover:bg-white/10">Discard</button>
-                <button onClick={handleSaveProfile} className="flex-[2] py-4 bg-xs-cyan text-black rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-[0_0_30px_rgba(0,255,255,0.4)] hover:scale-105 active:scale-95 transition-all">Commit Sync</button>
+                <button onClick={handleSaveProfile} className="flex-[2] py-4 bg-xs-cyan text-black rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-[0_0_30px_rgba(0,255,255,0.4)] hover:scale-105 active:scale-95 transition-all">Confirm</button>
             </div>
           )}
       </div>
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+          <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-6 animate-in fade-in">
+              <div className="w-full max-w-md glass-panel rounded-[3rem] p-8 border border-white/10 relative">
+                  <header className="flex justify-between items-center mb-8">
+                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Settings</h3>
+                      <button onClick={() => setShowSettingsModal(false)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 text-gray-500"><ICONS.X size={20}/></button>
+                  </header>
+                  <div className="space-y-4">
+                      <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                          <p className="text-sm font-bold text-white mb-2">Privacy</p>
+                          <div className="flex items-center justify-between">
+                              <span className="text-xs text-gray-400">Show Distance</span>
+                              <div className="w-10 h-5 bg-xs-cyan rounded-full relative"><div className="absolute right-1 top-1 w-3 h-3 bg-black rounded-full"></div></div>
+                          </div>
+                      </div>
+                      <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                          <p className="text-sm font-bold text-white mb-2">Notifications</p>
+                          <div className="flex items-center justify-between">
+                              <span className="text-xs text-gray-400">Push Alerts</span>
+                              <div className="w-10 h-5 bg-xs-purple rounded-full relative"><div className="absolute right-1 top-1 w-3 h-3 bg-black rounded-full"></div></div>
+                          </div>
+                      </div>
+                      <button className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-xs text-gray-300 font-bold border border-white/5">Blocked Users</button>
+                      <button className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-xs text-gray-300 font-bold border border-white/5">Linked Accounts</button>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 }

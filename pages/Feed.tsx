@@ -10,7 +10,8 @@ import {
     chatWithUnhingedAI, 
     chatWithNeuralPro, 
     searchPlacesGrounded,
-    generateProfileBio
+    generateProfileBio,
+    checkContentSafety
 } from '../services/geminiService';
 
 // Categorized emoji sets for the "All Emojis" request
@@ -253,7 +254,7 @@ const PostCard: React.FC<{
                         <h3 className="font-black text-white text-lg italic tracking-tight leading-none mb-1 uppercase">{post.username}</h3>
                         <div className="flex items-center gap-2">
                              <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest flex items-center gap-1">
-                                {isNSFW && <span className="text-xs-pink mr-2">● EXPLICIT_NODE</span>}
+                                {isNSFW && <span className="text-xs-pink mr-2">● LIVE</span>}
                                 {statusInfo.label}
                             </p>
                             {post.location && (
@@ -542,7 +543,10 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
       showNSFW: true,
       autoPlayGifs: true,
       aiModeration: 'High',
-      sortMethod: 'Recency'
+      sortMethod: 'Recency',
+      dataSaver: false,
+      audioAutoplay: false,
+      streamQuality: 'High'
   });
 
   const [chatType, setChatType] = useState<'flash' | 'pro'>('flash');
@@ -562,6 +566,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [showCreateEmojiPicker, setShowCreateEmojiPicker] = useState(false);
   const [showLocationMenu, setShowLocationMenu] = useState(false);
+  const [isCheckingSafety, setIsCheckingSafety] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -649,7 +654,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
               setCreateLocationCoords({ lat, lng });
               
               let expiry = null;
-              let label = "Neural_Sync_Point";
+              let label = "Location";
               
               if (type === '5m') { expiry = Date.now() + 5 * 60 * 1000; label = "Live (5m)"; }
               else if (type === '1h') { expiry = Date.now() + 60 * 60 * 1000; label = "Live (1h)"; }
@@ -690,9 +695,22 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
       }
   };
 
-  const handleBroadcast = () => {
+  const handleBroadcast = async () => {
       if (!createContent.trim() && !createMedia && !createAudio) return;
       
+      // Safety Check
+      if (createContent.trim()) {
+          setIsCheckingSafety(true);
+          const safety = await checkContentSafety(createContent);
+          setIsCheckingSafety(false);
+          
+          if (!safety.safe) {
+              soundService.play('error');
+              alert(`Content Flagged: ${safety.reason || "Violates community guidelines."}`);
+              return;
+          }
+      }
+
       const newPost: Post = {
           id: Date.now().toString(),
           userId: user.id,
@@ -846,12 +864,15 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
                           </div>
                       )}
                       {createAudio && (
-                          <div className="p-4 bg-xs-purple/10 border border-xs-purple/30 rounded-2xl flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                  <ICONS.Volume2 className="text-xs-purple" size={20} />
-                                  <span className="text-[10px] font-black uppercase text-xs-purple tracking-widest">Audio_Clip_Recorded</span>
+                          <div className="p-4 bg-xs-purple/10 border border-xs-purple/30 rounded-2xl flex flex-col gap-3">
+                              <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                      <ICONS.Volume2 className="text-xs-purple" size={20} />
+                                      <span className="text-[10px] font-black uppercase text-xs-purple tracking-widest">Audio_Clip_Recorded</span>
+                                  </div>
+                                  <button onClick={() => setCreateAudio(null)} className="text-gray-500 hover:text-white"><ICONS.X size={16} /></button>
                               </div>
-                              <button onClick={() => setCreateAudio(null)} className="text-gray-500 hover:text-white"><ICONS.X size={16} /></button>
+                              <audio src={createAudio} controls className="w-full" />
                           </div>
                       )}
                       {createLocation && (
@@ -908,10 +929,10 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
                       </div>
                       <button 
                         onClick={handleBroadcast}
-                        disabled={!createContent.trim() && !createMedia && !createAudio}
-                        className="px-10 py-3 bg-xs-cyan text-black rounded-xl font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-4xl"
+                        disabled={(!createContent.trim() && !createMedia && !createAudio) || isCheckingSafety}
+                        className="px-10 py-3 bg-xs-cyan text-black rounded-xl font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-4xl flex items-center gap-2"
                       >
-                          Broadcast
+                          {isCheckingSafety ? 'Scanning...' : 'Broadcast'}
                       </button>
                   </div>
               </div>
@@ -944,7 +965,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
       {/* FEED SETTINGS MODAL */}
       {showSettings && (
           <div className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-3xl flex items-center justify-center p-6 animate-in fade-in duration-300">
-              <div className="w-full max-w-md glass-panel rounded-[3.5rem] p-10 ring-1 ring-white/10 shadow-4xl">
+              <div className="w-full max-w-md glass-panel rounded-[3.5rem] p-10 ring-1 ring-white/10 shadow-4xl overflow-y-auto max-h-[85vh] custom-scrollbar">
                   <header className="flex justify-between items-center mb-10">
                       <div>
                           <h2 className="text-3xl font-black italic uppercase tracking-tighter">Settings</h2>
@@ -980,6 +1001,32 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
                           </button>
                       </div>
 
+                      <div className="flex items-center justify-between p-5 bg-white/5 rounded-3xl border border-white/5 group">
+                          <div className="flex items-center gap-4">
+                              <ICONS.Volume2 size={20} className="text-xs-cyan" />
+                              <span className="text-sm font-black uppercase tracking-wider text-gray-300">Audio Autoplay</span>
+                          </div>
+                          <button 
+                            onClick={() => setFeedSettings({...feedSettings, audioAutoplay: !feedSettings.audioAutoplay})}
+                            className={`w-14 h-7 rounded-full relative transition-colors duration-500 ${feedSettings.audioAutoplay ? 'bg-xs-cyan shadow-[0_0_15px_rgba(0,255,255,0.4)]' : 'bg-gray-800'}`}
+                          >
+                              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${feedSettings.audioAutoplay ? 'left-8 scale-110' : 'left-1'}`}></div>
+                          </button>
+                      </div>
+
+                      <div className="flex items-center justify-between p-5 bg-white/5 rounded-3xl border border-white/5 group">
+                          <div className="flex items-center gap-4">
+                              <ICONS.ArrowLeft size={20} className="text-xs-purple" />
+                              <span className="text-sm font-black uppercase tracking-wider text-gray-300">Data Saver</span>
+                          </div>
+                          <button 
+                            onClick={() => setFeedSettings({...feedSettings, dataSaver: !feedSettings.dataSaver})}
+                            className={`w-14 h-7 rounded-full relative transition-colors duration-500 ${feedSettings.dataSaver ? 'bg-xs-purple shadow-[0_0_15px_rgba(189,0,255,0.4)]' : 'bg-gray-800'}`}
+                          >
+                              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${feedSettings.dataSaver ? 'left-8 scale-110' : 'left-1'}`}></div>
+                          </button>
+                      </div>
+
                       <div className="space-y-4">
                           <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] ml-2">AI Assistance Sync</label>
                           <div className="grid grid-cols-2 gap-3">
@@ -1009,6 +1056,21 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
                               ))}
                           </div>
                       </div>
+
+                      <div className="space-y-4">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] ml-2">Stream Quality</label>
+                          <div className="grid grid-cols-3 gap-3">
+                              {['Low', 'Medium', 'High'].map(q => (
+                                  <button 
+                                    key={q}
+                                    onClick={() => setFeedSettings({...feedSettings, streamQuality: q})}
+                                    className={`py-3 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest ${feedSettings.streamQuality === q ? 'bg-xs-pink text-white border-xs-pink shadow-xl' : 'bg-white/5 text-gray-500 border-white/5 hover:border-white/20'}`}
+                                  >
+                                      {q}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
                   </div>
 
                   <button 
@@ -1024,7 +1086,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
       {/* GROK UNHINGED MODAL */}
       {showGrok && (
           <div className="fixed inset-0 z-[150] bg-black/95 backdrop-blur-3xl flex items-center justify-center p-6 animate-in fade-in duration-300">
-              <div className="w-full max-w-lg glass-panel rounded-[3rem] flex flex-col h-[80vh] ring-1 ring-xs-cyan/20">
+              <div className="w-full max-w-lg glass-panel rounded-[3rem] flex flex-col h-[80vh] ring-1 ring-xs-cyan/20 bg-gradient-to-br from-xs-purple/10 to-xs-cyan/10">
                   <header className="p-8 border-b border-white/5 flex justify-between items-center">
                       <div className="flex items-center gap-4">
                         <NeuralOrb isLive={isThinking} isThinking={isThinking} isSpeaking={false} onClick={() => {}} variant={chatType} />
@@ -1033,7 +1095,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
                                 {chatType === 'pro' ? 'Neural Architect' : 'Grok Unhinged'}
                             </h2>
                             <p className="text-[9px] font-mono text-xs-cyan uppercase tracking-widest">
-                                {chatType === 'pro' ? 'Gemini_Pro_Online' : 'Neural_Sync_Active'}
+                                {chatType === 'pro' ? 'Active' : 'Active'}
                             </p>
                         </div>
                       </div>
@@ -1060,7 +1122,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
                       )}
                       {messages.map((m, i) => (
                           <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-1`}>
-                              <div className={`max-w-[85%] p-4 rounded-2xl ${m.role === 'user' ? 'bg-white/10 text-white ml-12' : 'bg-xs-cyan/5 border border-xs-cyan/20 mr-12 shadow-xl'}`}>
+                              <div className={`max-w-[85%] p-4 rounded-2xl ${m.role === 'user' ? 'bg-white/10 text-white ml-12' : 'bg-gradient-to-br from-xs-purple/20 to-xs-cyan/20 border border-xs-cyan/30 mr-12 shadow-xl text-white'}`}>
                                   {m.text}
                                   {m.links && m.links.length > 0 && (
                                       <div className="mt-4 flex flex-col gap-2">
@@ -1092,7 +1154,7 @@ const Feed: React.FC<FeedProps> = ({ user, onReport }) => {
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
-                            placeholder="Direct neural input..." 
+                            placeholder="Imput" 
                             className="flex-1 bg-black/40 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-xs-cyan transition-all text-sm italic"
                           />
                           <button onClick={handleSendChat} className="p-5 bg-xs-cyan text-black rounded-2xl active:scale-90 transition-transform shadow-4xl shadow-xs-cyan/20"><ICONS.Rocket size={24}/></button>

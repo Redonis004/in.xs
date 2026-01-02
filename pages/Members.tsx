@@ -21,14 +21,12 @@ const generateMockMembers = (count: number) => {
     isVerified: Math.random() > 0.8,
     hosting: Math.random() > 0.6 ? 'Hosting' : 'No',
     category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)],
-    // Add mock media for the modal
     photos: Array.from({length: 4}, (_, j) => `https://picsum.photos/400/500?random=${i * 10 + j}`),
     videos: Math.random() > 0.8 ? ['https://www.w3schools.com/html/mov_bbb.mp4'] : [],
     bio: "Just a digital soul wandering the grid. Into fitness, tech, and good vibes. Hmu if you want to sync."
   }));
 };
 
-// Generate 100 mock members
 const ALL_MEMBERS = generateMockMembers(100);
 
 const FILTER_OPTIONS = [
@@ -54,6 +52,13 @@ const Members: React.FC<MembersProps> = ({ user }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [networkSettings, setNetworkSettings] = useState({
+      showOffline: false,
+      ghostMode: false,
+      gridLayout: 'Compact',
+      units: 'Imperial',
+      autoBoost: false
+  });
   
   // Modal State
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
@@ -65,9 +70,11 @@ const Members: React.FC<MembersProps> = ({ user }) => {
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvc, setCvc] = useState('');
+  const [zip, setZip] = useState('');
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [paypalStep, setPaypalStep] = useState<'connect' | 'auth'>('connect');
 
-  // Construct the "Me" profile object adapting User type to member structure
+  // Construct the "Me" profile object
   const myProfile = {
     ...user, // Spread user props
     id: user.id,
@@ -81,25 +88,23 @@ const Members: React.FC<MembersProps> = ({ user }) => {
     isVerified: user.isVerified,
     hosting: user.hosting || 'No',
     category: 'Me',
-    // Ensure photos exist
     photos: user.photos && user.photos.length > 0 ? user.photos : [user.avatarUrl],
     videos: user.videos || [],
     bio: user.bio
   };
 
-  // Combine user with other members
   const allMembers = [myProfile, ...otherMembers];
 
-  // Apply filters logic
+  // Apply filters
   const filteredMembers = allMembers.filter(m => {
       if (searchQuery && !m.username.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (!networkSettings.showOffline && !m.isOnline && m.id !== user.id) return false;
       
       // Check status filters
       if (activeFilters.includes("Online") && !m.isOnline) return false;
       if (activeFilters.includes("Verified") && !m.isVerified) return false;
       if (activeFilters.includes("Hosting") && m.hosting !== 'Hosting') return false;
 
-      // Check role filters - if any role filter is active, member must match at least one
       const roleFilters = activeFilters.filter(f => ['Top', 'Bottom', 'Verse', 'Side'].includes(f));
       if (roleFilters.length > 0 && !roleFilters.includes(m.role)) return false;
 
@@ -112,6 +117,8 @@ const Members: React.FC<MembersProps> = ({ user }) => {
   const handleBoostClick = () => {
     soundService.play('click');
     setShowPaymentModal(true);
+    setPaymentMethod('card'); // Reset to card default
+    setPaypalStep('connect');
   };
 
   const handleMemberClick = (member: any) => {
@@ -137,7 +144,7 @@ const Members: React.FC<MembersProps> = ({ user }) => {
 
   const handlePaymentSubmit = () => {
     if (paymentMethod === 'card') {
-        if (!cardNumber || !expiry || !cvc || !cardName) {
+        if (!cardNumber || !expiry || !cvc || !cardName || !zip) {
             soundService.play('error');
             alert("Please fill in all card details.");
             return;
@@ -151,13 +158,24 @@ const Members: React.FC<MembersProps> = ({ user }) => {
     setTimeout(() => {
         setProcessingPayment(false);
         setShowPaymentModal(false);
-        setDisplayLimit(prev => prev + 18); // Permanent boost for this session
+        setDisplayLimit(prev => prev + 18); // Apply Boost
         soundService.play('success');
         setCardName('');
         setCardNumber('');
         setExpiry('');
         setCvc('');
-    }, 2000);
+        setZip('');
+    }, 2500);
+  };
+
+  const handlePaypalAuth = () => {
+      soundService.play('unlock');
+      setProcessingPayment(true);
+      setTimeout(() => {
+          setProcessingPayment(false);
+          setPaypalStep('auth');
+          soundService.play('success');
+      }, 1500);
   };
 
   const toggleFilter = (filter: string) => {
@@ -254,13 +272,13 @@ const Members: React.FC<MembersProps> = ({ user }) => {
       </div>
 
       {/* Grid Display */}
-      <div className={`grid gap-3 transition-all duration-500 px-1 grid-cols-3 md:grid-cols-5 lg:grid-cols-6 relative z-10`}>
+      <div className={`grid gap-3 transition-all duration-500 px-1 ${networkSettings.gridLayout === 'Comfortable' ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3 md:grid-cols-5 lg:grid-cols-6'} relative z-10`}>
         {visibleMembers.map((member, idx) => {
             const isMe = member.id === user.id;
             return (
             <Card3D 
                 key={member.id} 
-                className={`cursor-pointer group relative h-40 ${isMe ? 'ring-2 ring-xs-cyan/50 shadow-[0_0_20px_rgba(0,255,255,0.2)]' : ''}`}
+                className={`cursor-pointer group relative ${networkSettings.gridLayout === 'Comfortable' ? 'h-64' : 'h-40'} ${isMe ? 'ring-2 ring-xs-cyan/50 shadow-[0_0_20px_rgba(0,255,255,0.2)]' : ''}`}
                 innerClassName="p-0 border-white/10" 
                 glowColor={getRoleColor(member.role) as any}
                 hoverZ={60}
@@ -284,7 +302,7 @@ const Members: React.FC<MembersProps> = ({ user }) => {
                     )}
 
                     <div className="absolute bottom-0 left-0 right-0 p-3">
-                        <h3 className={`font-black text-white italic tracking-tighter leading-none mb-1 group-hover:text-xs-cyan transition-colors text-xs truncate`}>
+                        <h3 className={`font-black text-white italic tracking-tighter leading-none mb-1 group-hover:text-xs-cyan transition-colors ${networkSettings.gridLayout === 'Comfortable' ? 'text-lg' : 'text-xs truncate'}`}>
                             {member.username}
                         </h3>
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -295,9 +313,11 @@ const Members: React.FC<MembersProps> = ({ user }) => {
                              }`}>
                                  {member.role}
                              </span>
-                             <span className="text-[7px] font-black text-gray-300 uppercase tracking-widest bg-black/60 px-1.5 py-0.5 rounded border border-white/10">
-                                 {isMe ? '0mi' : `${member.distance}mi`}
-                             </span>
+                             {!networkSettings.ghostMode && (
+                                 <span className="text-[7px] font-black text-gray-300 uppercase tracking-widest bg-black/60 px-1.5 py-0.5 rounded border border-white/10">
+                                     {isMe ? '0' : member.distance}{networkSettings.units === 'Imperial' ? 'mi' : 'km'}
+                                 </span>
+                             )}
                         </div>
                     </div>
                 </div>
@@ -334,9 +354,59 @@ const Members: React.FC<MembersProps> = ({ user }) => {
         </div>
       )}
 
-      {/* Payment Modal */}
+      {/* Network Settings Modal */}
+      {showSettings && (
+          <div className="fixed inset-0 z-[150] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-6 animate-in fade-in" onClick={() => setShowSettings(false)}>
+              <div 
+                className="w-full max-w-sm glass-panel rounded-[3rem] p-8 border border-white/10 relative"
+                onClick={e => e.stopPropagation()}
+              >
+                  <header className="flex justify-between items-center mb-8">
+                      <div>
+                          <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Grid_Config</h3>
+                          <p className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em]">Network Preferences</p>
+                      </div>
+                      <button onClick={() => setShowSettings(false)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 text-gray-500"><ICONS.X size={20}/></button>
+                  </header>
+                  <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                          <span className="text-xs font-bold text-gray-300">Show Offline</span>
+                          <button onClick={() => setNetworkSettings({...networkSettings, showOffline: !networkSettings.showOffline})} className={`w-10 h-5 rounded-full relative transition-all ${networkSettings.showOffline ? 'bg-xs-cyan' : 'bg-gray-700'}`}>
+                              <div className={`absolute top-1 w-3 h-3 bg-black rounded-full transition-all ${networkSettings.showOffline ? 'left-6' : 'left-1'}`}></div>
+                          </button>
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                          <span className="text-xs font-bold text-gray-300">Ghost Mode (Hide Distance)</span>
+                          <button onClick={() => setNetworkSettings({...networkSettings, ghostMode: !networkSettings.ghostMode})} className={`w-10 h-5 rounded-full relative transition-all ${networkSettings.ghostMode ? 'bg-xs-purple' : 'bg-gray-700'}`}>
+                              <div className={`absolute top-1 w-3 h-3 bg-black rounded-full transition-all ${networkSettings.ghostMode ? 'left-6' : 'left-1'}`}></div>
+                          </button>
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                          <span className="text-xs font-bold text-gray-300">Layout</span>
+                          <button 
+                            onClick={() => setNetworkSettings({...networkSettings, gridLayout: networkSettings.gridLayout === 'Compact' ? 'Comfortable' : 'Compact'})}
+                            className="text-[10px] font-black uppercase bg-black px-3 py-1 rounded-lg border border-white/20 text-white"
+                          >
+                              {networkSettings.gridLayout}
+                          </button>
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                          <span className="text-xs font-bold text-gray-300">Distance Units</span>
+                          <button 
+                            onClick={() => setNetworkSettings({...networkSettings, units: networkSettings.units === 'Imperial' ? 'Metric' : 'Imperial'})}
+                            className="text-[10px] font-black uppercase bg-black px-3 py-1 rounded-lg border border-white/20 text-white"
+                          >
+                              {networkSettings.units}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Payment Modal - Secure Boost */}
       {showPaymentModal && (
-          <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4 animate-in fade-in duration-300" onClick={() => setShowPaymentModal(false)}>
+          <div className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4 animate-in fade-in duration-300" onClick={() => setShowPaymentModal(false)}>
               <div 
                 className="w-full max-w-md bg-xs-dark border border-white/10 rounded-[3rem] p-8 relative animate-in zoom-in-95 duration-300 shadow-4xl"
                 onClick={e => e.stopPropagation()}
@@ -380,27 +450,27 @@ const Members: React.FC<MembersProps> = ({ user }) => {
                                   <input 
                                     type="text" placeholder="NAME ON CARD" value={cardName}
                                     onChange={e => { setCardName(e.target.value); soundService.play('typing'); }}
-                                    className="w-full bg-black/60 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-xs-yellow outline-none font-black italic transition-all placeholder-gray-800"
+                                    className="w-full bg-black/60 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-green-500 outline-none font-black italic transition-all placeholder-gray-800"
                                   />
                               </div>
                               <div className="space-y-2 px-1">
                                   <label className="text-[10px] text-gray-500 uppercase font-black tracking-[0.4em]">Number</label>
                                   <div className="relative">
-                                    <ICONS.Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-xs-yellow" size={16} />
+                                    <ICONS.Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-green-500" size={16} />
                                     <input 
                                         type="text" inputMode="numeric" placeholder="0000 0000 0000 0000"
                                         value={cardNumber} onChange={handleCardNumberChange} maxLength={19}
-                                        className="w-full bg-black/60 border border-white/10 rounded-2xl pl-16 pr-6 py-4 text-white focus:border-xs-yellow outline-none font-mono transition-all placeholder-gray-800"
+                                        className="w-full bg-black/60 border border-white/10 rounded-2xl pl-16 pr-6 py-4 text-white focus:border-green-500 outline-none font-mono transition-all placeholder-gray-800"
                                     />
                                   </div>
                               </div>
-                              <div className="grid grid-cols-2 gap-4 px-1">
+                              <div className="grid grid-cols-3 gap-3 px-1">
                                   <div className="space-y-2">
                                       <label className="text-[10px] text-gray-500 uppercase font-black tracking-[0.4em]">EXP</label>
                                       <input 
                                         type="text" inputMode="numeric" placeholder="MM/YY"
                                         value={expiry} onChange={handleExpiryChange} maxLength={5}
-                                        className="w-full bg-black/60 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-xs-yellow outline-none text-center transition-all placeholder-gray-800"
+                                        className="w-full bg-black/60 border border-white/10 rounded-2xl px-4 py-4 text-white focus:border-green-500 outline-none text-center transition-all placeholder-gray-800"
                                       />
                                   </div>
                                   <div className="space-y-2">
@@ -409,44 +479,80 @@ const Members: React.FC<MembersProps> = ({ user }) => {
                                         type="text" inputMode="numeric" placeholder="000"
                                         value={cvc} onChange={e => { setCvc(e.target.value.replace(/\D/g, '').slice(0, 4)); soundService.play('typing'); }}
                                         maxLength={4}
-                                        className="w-full bg-black/60 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-xs-yellow outline-none text-center transition-all placeholder-gray-800"
+                                        className="w-full bg-black/60 border border-white/10 rounded-2xl px-4 py-4 text-white focus:border-green-500 outline-none text-center transition-all placeholder-gray-800"
+                                      />
+                                  </div>
+                                  <div className="space-y-2">
+                                      <label className="text-[10px] text-gray-500 uppercase font-black tracking-[0.4em]">ZIP</label>
+                                      <input 
+                                        type="text" placeholder="ZIP"
+                                        value={zip} onChange={e => { setZip(e.target.value); soundService.play('typing'); }}
+                                        maxLength={6}
+                                        className="w-full bg-black/60 border border-white/10 rounded-2xl px-4 py-4 text-white focus:border-green-500 outline-none text-center transition-all placeholder-gray-800"
                                       />
                                   </div>
                               </div>
+                              
+                              <button 
+                                onClick={handlePaymentSubmit}
+                                disabled={processingPayment}
+                                className="w-full py-6 bg-green-500 text-black rounded-[1.8rem] font-black text-lg uppercase tracking-[0.3em] shadow-4xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 mt-4 hover:shadow-[0_0_30px_rgba(34,197,94,0.6)]"
+                              >
+                                  {processingPayment ? (
+                                      <>
+                                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                                        Processing...
+                                      </>
+                                  ) : (
+                                      <>
+                                        <ICONS.Lock size={20} />
+                                        Secure Pay $1.50
+                                      </>
+                                  )}
+                              </button>
                           </div>
                       ) : (
                           <div className="py-8 space-y-6 text-center animate-in slide-in-from-right-4">
-                              <p className="text-xs text-gray-400 font-medium">Securely connect your PayPal account to boost instantly.</p>
-                              <button className="w-full py-4 bg-[#FFC439] hover:bg-[#F4B400] rounded-2xl text-[#003087] font-black text-lg italic shadow-lg hover:scale-[1.02] transition-transform">
-                                  PayPal <span className="text-[#009cde] not-italic">Checkout</span>
-                              </button>
+                              <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
+                                  <ICONS.MessageCircle size={40} className="text-[#0070BA]" />
+                              </div>
+                              
+                              {paypalStep === 'connect' ? (
+                                  <>
+                                    <p className="text-xs text-gray-400 font-medium px-8 leading-relaxed">Securely connect your existing PayPal account to authorize this one-time payment.</p>
+                                    <button 
+                                        onClick={handlePaypalAuth}
+                                        disabled={processingPayment}
+                                        className="w-full py-4 bg-[#FFC439] hover:bg-[#F4B400] rounded-2xl text-[#003087] font-black text-lg italic shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2"
+                                    >
+                                        {processingPayment ? 'Connecting...' : <>PayPal <span className="text-[#009cde] not-italic font-bold">Checkout</span></>}
+                                    </button>
+                                  </>
+                              ) : (
+                                  <div className="space-y-4">
+                                      <div className="bg-[#0070BA]/10 border border-[#0070BA]/30 p-4 rounded-2xl flex items-center gap-3 text-left">
+                                          <div className="w-10 h-10 rounded-full bg-[#0070BA] flex items-center justify-center text-white font-bold">P</div>
+                                          <div>
+                                              <p className="text-white font-bold text-sm">PayPal Account Linked</p>
+                                              <p className="text-[10px] text-gray-400">auth_token_882910... verified</p>
+                                          </div>
+                                          <ICONS.CheckCircle size={20} className="text-green-500 ml-auto" />
+                                      </div>
+                                      <button 
+                                        onClick={handlePaymentSubmit}
+                                        disabled={processingPayment}
+                                        className="w-full py-6 bg-green-500 text-black rounded-[1.8rem] font-black text-lg uppercase tracking-[0.3em] shadow-4xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 mt-4"
+                                      >
+                                          {processingPayment ? 'Processing...' : 'Authorize Pay $1.50'}
+                                      </button>
+                                  </div>
+                              )}
                           </div>
                       )}
-
-                      <button 
-                        onClick={handlePaymentSubmit}
-                        disabled={processingPayment}
-                        className="w-full py-6 bg-white text-black rounded-[1.8rem] font-black text-xl uppercase tracking-[0.3em] shadow-4xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
-                      >
-                          {processingPayment ? (
-                              <>
-                                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                                Processing...
-                              </>
-                          ) : (
-                              <>
-                                <ICONS.ShieldCheck size={20} />
-                                Secure Pay $1.50
-                              </>
-                          )}
-                      </button>
                       
                       <div className="text-center space-y-2 pt-2">
                           <p className="text-[8px] text-gray-500 font-mono uppercase tracking-widest flex items-center justify-center gap-2">
-                              <ICONS.Lock size={10} /> SSL ENCRYPTED • SECURE TOKENIZATION
-                          </p>
-                          <p className="text-[7px] text-gray-600 font-medium leading-relaxed max-w-xs mx-auto">
-                              Adhering to the Ontario Consumer Protection Act. Digital services provided by in.xs are final sale.
+                              <ICONS.ShieldCheck size={10} /> 256-BIT SSL ENCRYPTED PAYMENT
                           </p>
                       </div>
                   </div>

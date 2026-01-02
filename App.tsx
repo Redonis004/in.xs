@@ -19,7 +19,9 @@ import Members from './pages/Members';
 import About from './pages/About';
 import Motion from './pages/Motion';
 import SupportChat from './pages/SupportChat';
+import RideShare from './pages/RideShare';
 
+// Demo user kept for type reference or fallback if needed, but not used by default
 const DEMO_USER: User = {
   id: 'demo_user_01',
   username: 'Neon_Drifter',
@@ -57,8 +59,9 @@ const Navigation = () => {
     { to: "/", icon: ICONS.Home, label: "Scene", color: "text-xs-purple", glow: "shadow-xs-purple" },
     { to: "/chat", icon: ICONS.MessageCircle, label: "Chats", color: "text-xs-cyan", glow: "shadow-xs-cyan" },
     { to: "/members", icon: ICONS.Globe, label: "Network", color: "text-xs-yellow", glow: "shadow-xs-yellow" },
+    { to: "/rides", icon: ICONS.Car, label: "Ride", color: "text-green-500", glow: "shadow-green-500" },
     { to: "camera", isCamera: true },
-    { to: "/subscription", icon: ICONS.Star, label: "Premium", color: "text-xs-pink", glow: "shadow-xs-pink" },
+    { to: "/subscription", icon: ICONS.Star, label: "Premium", isRaised: true },
     { to: "/motion", icon: ICONS.Play, label: "Motion", color: "text-xs-pink", glow: "shadow-xs-pink" },
     { to: "/profile", icon: ICONS.User, label: "Identity", color: "text-xs-cyan", glow: "shadow-xs-cyan" },
     { to: "/support", icon: ICONS.Bot, label: "Support", color: "text-white", glow: "shadow-white" },
@@ -86,6 +89,22 @@ const Navigation = () => {
                         </div>
                     );
                 }
+
+                if (item.isRaised && item.icon) {
+                    return (
+                        <div key={item.to} className="relative group perspective-500" style={{ perspective: '500px' }}>
+                            <NavLink 
+                                to={item.to}
+                                onClick={() => soundService.play('tab')}
+                                className={({ isActive }) => `w-14 h-14 bg-gradient-to-tr from-xs-yellow via-xs-pink to-xs-purple rounded-2xl flex items-center justify-center text-black shadow-[0_0_20px_rgba(249,249,0,0.4)] transform transition-all duration-300 group-hover:rotate-6 group-hover:scale-110 group-active:scale-95 group-active:translate-z-[-10px] ${isActive ? 'ring-2 ring-white scale-110' : 'opacity-90'}`}
+                                style={{ transformStyle: 'preserve-3d', transform: 'translateZ(20px)' }}
+                            >
+                                <item.icon size={24} className="group-hover:rotate-12 transition-transform" />
+                            </NavLink>
+                        </div>
+                    );
+                }
+
                 return (
                     <NavLink 
                         key={item.to} 
@@ -99,11 +118,11 @@ const Navigation = () => {
                         {({ isActive }) => (
                             <div className="flex flex-col items-center gap-1 relative">
                                 <div className={`relative transition-all duration-500 ${isActive ? `drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]` : ''}`}>
-                                    <item.icon 
+                                    {item.icon && <item.icon 
                                       size={22} 
                                       className={`transition-all duration-500 ${isActive ? item.color : 'text-white'}`} 
-                                    />
-                                    {isActive && (
+                                    />}
+                                    {isActive && item.color && (
                                         <div className={`absolute inset-0 blur-lg opacity-50 ${item.color.replace('text-', 'bg-')}`}></div>
                                     )}
                                 </div>
@@ -112,7 +131,7 @@ const Navigation = () => {
                                   {item.label}
                                 </span>
                                 
-                                {isActive && (
+                                {isActive && item.color && (
                                     <div className={`absolute -bottom-6 w-8 h-1 rounded-full ${item.color.replace('text-', 'bg-')} shadow-[0_0_10px_currentColor] animate-pulse`}></div>
                                 )}
                             </div>
@@ -181,10 +200,30 @@ const PageContainer = ({ children }: { children?: React.ReactNode }) => {
 export default function App() {
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('inxs_user_profile');
-    return saved ? JSON.parse(saved) : DEMO_USER;
+    return saved ? JSON.parse(saved) : null; 
   });
 
-  const handleAuthComplete = (newUser: User) => {
+  const [isAgeVerified, setIsAgeVerified] = useState<boolean>(() => {
+      return localStorage.getItem('inxs_age_verified') === 'true';
+  });
+
+  const handleAgeConfirm = () => {
+      localStorage.setItem('inxs_age_verified', 'true');
+      setIsAgeVerified(true);
+      soundService.play('unlock');
+  };
+
+  const handleExit = () => {
+      soundService.play('lock');
+      try {
+          window.close();
+      } catch (e) {
+          console.error("Window close blocked");
+      }
+      window.location.href = "about:blank"; 
+  };
+
+  const handleAuthComplete = (newUser: User, redirectPath?: string) => {
     setUser(newUser);
     localStorage.setItem('inxs_user_profile', JSON.stringify(newUser));
     const savedIdentities = JSON.parse(localStorage.getItem('inxs_known_identities') || '[]');
@@ -196,6 +235,12 @@ export default function App() {
         localStorage.setItem('inxs_known_identities', JSON.stringify(updated));
     }
     soundService.play('success');
+    
+    if (redirectPath) {
+        setTimeout(() => {
+            window.location.hash = `#${redirectPath}`;
+        }, 100);
+    }
   };
 
   const handleSignOut = () => {
@@ -203,6 +248,62 @@ export default function App() {
     setUser(null);
     localStorage.removeItem('inxs_user_profile');
   };
+
+  const handleDeleteAccount = () => {
+    soundService.play('trash');
+    // Remove current user from storage and state
+    localStorage.removeItem('inxs_user_profile');
+    
+    // Also remove from known identities
+    if (user) {
+        const savedIdentities = JSON.parse(localStorage.getItem('inxs_known_identities') || '[]');
+        const updatedIdentities = savedIdentities.filter((i: User) => i.id !== user.id);
+        localStorage.setItem('inxs_known_identities', JSON.stringify(updatedIdentities));
+    }
+    
+    setUser(null);
+  };
+
+  // Age Verification Modal
+  if (!isAgeVerified) {
+      return (
+          <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-700 font-sans">
+             <div className="w-full max-w-sm glass-panel p-10 rounded-[3rem] border border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.2)] relative overflow-hidden bg-black/80 backdrop-blur-3xl">
+                <div className="absolute inset-0 bg-gradient-to-b from-red-500/10 to-transparent pointer-events-none"></div>
+                
+                <div className="w-24 h-24 mx-auto bg-red-500/20 rounded-full flex items-center justify-center mb-8 border border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.4)] animate-pulse">
+                    <ICONS.ShieldAlert size={48} className="text-red-500" />
+                </div>
+
+                <h1 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-4">
+                  Restricted Access
+                </h1>
+                
+                <p className="text-gray-400 text-sm font-medium leading-relaxed mb-8">
+                  This interface contains explicit material intended for adults only. 
+                  <br/><br/>
+                  By entering, you confirm that you are at least <span className="text-white font-black">18 years of age</span> and legally permitted to view such content in your jurisdiction.
+                </p>
+
+                <div className="space-y-3 relative z-10">
+                  <button 
+                    onClick={handleAgeConfirm}
+                    className="w-full py-5 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-lg shadow-red-500/20 transition-all hover:scale-[1.02] active:scale-95"
+                  >
+                    I am 18+
+                  </button>
+                  
+                  <button 
+                    onClick={handleExit}
+                    className="block w-full py-4 text-gray-500 hover:text-white font-black uppercase tracking-[0.2em] text-xs transition-colors"
+                  >
+                    Exit
+                  </button>
+                </div>
+             </div>
+          </div>
+      );
+  }
 
   if (!user) {
       return (
@@ -229,6 +330,7 @@ export default function App() {
                   localStorage.setItem('inxs_known_identities', JSON.stringify(newIdentities));
               }} />} />
               <Route path="/members" element={<Members user={user} />} />
+              <Route path="/rides" element={<RideShare user={user} onUpdateUser={(d) => setUser({...user, ...d})} />} />
               <Route path="/motion" element={<Motion />} />
               <Route path="/subscription" element={<Subscription user={user} onUpgrade={(t) => setUser({...user, subscription: t})} />} />
               <Route path="/profile" element={<Profile user={user} onSignOut={handleSignOut} onUpdateUser={(d) => {
@@ -239,7 +341,7 @@ export default function App() {
                   const newIdentities = savedIdentities.map((i: User) => i.id === user.id ? updated : i);
                   localStorage.setItem('inxs_known_identities', JSON.stringify(newIdentities));
               }} />} />
-              <Route path="/support" element={<SupportChat />} />
+              <Route path="/support" element={<SupportChat onSignOut={handleSignOut} onDeleteAccount={handleDeleteAccount} />} />
               <Route path="/user/:userId" element={<UserProfile user={user} onUpdateUser={(d) => setUser({...user, ...d})} />} />
               <Route path="/about" element={<About />} />
               <Route path="*" element={<Navigate to="/" />} />

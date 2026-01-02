@@ -5,6 +5,11 @@ import { soundService } from '../services/soundService';
 import { chatWithNeuralPro, searchPlacesGrounded } from '../services/geminiService';
 import Card3D from '../components/Card3D';
 
+interface SupportChatProps {
+    onSignOut?: () => void;
+    onDeleteAccount?: () => void;
+}
+
 interface Message {
     role: 'user' | 'model';
     text: string;
@@ -21,12 +26,14 @@ const SUGGESTIONS = [
     "Report a user",
 ];
 
-const SupportChat: React.FC = () => {
+const SupportChat: React.FC<SupportChatProps> = ({ onSignOut, onDeleteAccount }) => {
     const [messages, setMessages] = useState<Message[]>([
         { role: 'model', text: "Greetings. I am the Neural Architect, your AI support interface for [in.xs]. How can I assist with your grid experience today?", timestamp: Date.now() }
     ]);
     const [inputText, setInputText] = useState('');
     const [isThinking, setIsThinking] = useState(false);
+    const [showAccountOptions, setShowAccountOptions] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -87,8 +94,31 @@ const SupportChat: React.FC = () => {
         }
     };
 
+    const handleDeactivate = () => {
+        if (onSignOut) {
+            if (confirm("Deactivate your profile? You can reactivate by signing in again.")) {
+                soundService.play('lock');
+                onSignOut();
+            }
+        }
+    };
+
+    const handleDelete = () => {
+        if (onDeleteAccount) {
+            soundService.play('error'); // Alert sound
+            setShowDeleteConfirm(true);
+        }
+    };
+
+    const confirmDelete = () => {
+        if (onDeleteAccount) {
+            setShowDeleteConfirm(false);
+            onDeleteAccount();
+        }
+    };
+
     return (
-        <div className="flex flex-col h-full pt-10 pb-28 px-4">
+        <div className="flex flex-col h-full pt-10 pb-28 px-4 relative">
             <header className="mb-6 flex items-center justify-between">
                 <div>
                     <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
@@ -97,6 +127,12 @@ const SupportChat: React.FC = () => {
                     </h1>
                     <p className="text-[9px] font-black uppercase text-gray-500 tracking-[0.4em] mt-1 ml-1">Neural Architect Online</p>
                 </div>
+                <button 
+                    onClick={() => setShowAccountOptions(true)} 
+                    className="p-3 bg-white/5 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5"
+                >
+                    <ICONS.UserX size={20} />
+                </button>
             </header>
 
             <div className="flex-1 overflow-hidden relative rounded-[2.5rem] border border-white/10 bg-black/40 backdrop-blur-3xl shadow-4xl flex flex-col">
@@ -184,6 +220,75 @@ const SupportChat: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Account Options Modal */}
+            {showAccountOptions && (
+                <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
+                    <div className="w-full max-w-sm glass-panel border border-white/20 rounded-[2.5rem] p-8 shadow-4xl relative overflow-hidden">
+                        <header className="flex justify-between items-center mb-8">
+                            <div>
+                                <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Account_Core</h3>
+                                <p className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em]">Management_Protocol</p>
+                            </div>
+                            <button onClick={() => setShowAccountOptions(false)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 text-gray-500"><ICONS.X size={20}/></button>
+                        </header>
+
+                        <div className="space-y-4">
+                            <button 
+                                onClick={() => { soundService.play('click'); onSignOut && onSignOut(); }}
+                                className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 transition-all"
+                            >
+                                <ICONS.LogOut size={16} /> Log Out_Session
+                            </button>
+                            
+                            <button 
+                                onClick={handleDeactivate}
+                                className="w-full py-4 bg-xs-yellow/10 hover:bg-xs-yellow/20 border border-xs-yellow/30 text-xs-yellow rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 transition-all"
+                            >
+                                <ICONS.Power size={16} /> Deactivate_Profile
+                            </button>
+
+                            <button 
+                                onClick={handleDelete}
+                                className="w-full py-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 transition-all mt-4"
+                            >
+                                <ICONS.Trash2 size={16} /> Delete_Account
+                            </button>
+                        </div>
+                        
+                        <p className="text-center text-[8px] text-gray-600 mt-8 font-mono uppercase tracking-widest">
+                            Warning: Deletion is permanent and irreversible.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-6 animate-in zoom-in-95 duration-200">
+                    <div className="w-full max-w-sm bg-xs-dark border-2 border-red-500 rounded-[3rem] p-8 shadow-[0_0_50px_rgba(239,68,68,0.3)] text-center">
+                        <ICONS.AlertTriangle size={64} className="text-red-500 mx-auto mb-6 animate-pulse" />
+                        <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-2">Final_Warning</h3>
+                        <p className="text-sm font-medium text-gray-300 leading-relaxed mb-8">
+                            You are about to permanently erase your identity from the [in.xs] grid. This action cannot be undone. All matches, chats, and data will be lost.
+                        </p>
+                        <div className="space-y-3">
+                            <button 
+                                onClick={confirmDelete}
+                                className="w-full py-5 bg-red-500 text-white rounded-2xl font-black uppercase text-xs tracking-[0.4em] shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
+                            >
+                                Confirm_Delete
+                            </button>
+                            <button 
+                                onClick={() => setShowDeleteConfirm(false)}
+                                className="w-full py-5 bg-white/5 text-gray-400 hover:text-white rounded-2xl font-black uppercase text-xs tracking-[0.4em] transition-all"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -247,3 +247,54 @@ export const generateIcebreaker = async (context: string): Promise<string> => {
         return "Hey there!";
       }
 }
+
+/**
+ * Checks content for safety violations using Gemini Flash.
+ * Returns { safe: boolean, reason: string }.
+ */
+export const checkContentSafety = async (text: string): Promise<{ safe: boolean, reason?: string }> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Analyze the following text for hate speech, severe harassment, or explicit real-world violence/illegal acts. Nudity/NSFW is ALLOWED in this context, only flag harm/hate/illegal. Return JSON: { "safe": boolean, "reason": string }. Text: "${text}"`,
+      config: { responseMimeType: "application/json" }
+    });
+    const result = JSON.parse(response.text || '{ "safe": true }');
+    return result;
+  } catch (error) {
+    console.error("Safety Check Error:", error);
+    return { safe: true }; // Fail open for demo purposes if API errors
+  }
+};
+
+/**
+ * Generates smart replies based on the last received message.
+ */
+export const generateSmartReplies = async (context: string): Promise<string[]> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Generate 3 short, distinct, casual smart replies for this message: "${context}". Use community slang (gay/queer friendly). Return JSON array of strings.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return JSON.parse(response.text || '[]');
+  } catch (error) {
+    console.error("Smart Reply Error:", error);
+    return [];
+  }
+};
+
+/**
+ * Rewrites a message with a specific tone.
+ */
+export const rewriteMessage = async (text: string, tone: 'flirty' | 'formal' | 'cyberpunk'): Promise<string> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Rewrite this text to be ${tone}. Keep it concise (under 2 sentences). Text: "${text}"`,
+    });
+    return response.text?.trim() || text;
+  } catch (error) {
+    return text;
+  }
+};

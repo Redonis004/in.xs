@@ -5,6 +5,7 @@ import { ICONS, BODY_TYPES } from '../constants';
 import { User, UserStatus } from '../types';
 import Card3D from './Card3D';
 import { soundService } from '../services/soundService';
+import { chatService } from '../services/chatService';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -61,16 +62,28 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, cu
       switch(action) {
           case 'oink':
               soundService.play('oink');
+              // Use chatService to send Oink
+              chatService.sendOink(targetUser, currentUser);
               alert(`🐷 OINK! You oinked at ${targetUser.username}`);
               break;
           case 'message':
               soundService.play('click');
+              // Create chat if needed via logic in chat page or here, but navigating with ID is enough for Chat.tsx to pick it up
               onClose();
               navigate(`/chat?chatId=${targetUser.id}`);
               break;
           case 'like':
               soundService.play('pop');
               setIsLiked(!isLiked);
+              if (!isLiked) {
+                  // Send Like Notification Message
+                  chatService.sendMessage(targetUser.id, {
+                      id: Date.now().toString(),
+                      senderId: 'me',
+                      text: "❤️ Liked your profile",
+                      timestamp: Date.now()
+                  });
+              }
               break;
           case 'block':
               if(confirm(`Block ${targetUser.username}? You won't see them on the grid.`)) {

@@ -1,5 +1,4 @@
 
-
 class SoundService {
   private ctx: AudioContext | null = null;
   private muted = false;
@@ -13,7 +12,7 @@ class SoundService {
     }
   }
 
-  play(type: 'click' | 'tab' | 'success' | 'error' | 'send' | 'oink' | 'camera' | 'pop' | 'lock' | 'unlock' | 'typing' | 'scan' | 'trash' | 'ring' | 'hangup') {
+  play(type: 'click' | 'tab' | 'success' | 'error' | 'send' | 'oink' | 'camera' | 'pop' | 'lock' | 'unlock' | 'typing' | 'scan' | 'trash' | 'ring' | 'hangup' | 'power' | 'broadcast' | 'coins') {
     if (this.muted) return;
     
     this.init();
@@ -196,6 +195,56 @@ class SoundService {
         gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
         osc.start(t);
         osc.stop(t + 0.3);
+        break;
+
+      case 'power':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, t);
+        osc.frequency.exponentialRampToValueAtTime(20, t + 0.5);
+        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        osc.start(t);
+        osc.stop(t + 0.5);
+        break;
+
+      case 'broadcast':
+        // Sci-fi power up
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(110, t);
+        osc.frequency.exponentialRampToValueAtTime(880, t + 1.0);
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.2, t + 0.5);
+        gain.gain.linearRampToValueAtTime(0, t + 1.0);
+        // Add LFO for wobble effect
+        const lfo = this.ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 10;
+        const lfoGain = this.ctx.createGain();
+        lfoGain.gain.value = 500;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start(t);
+        lfo.stop(t + 1.0);
+        
+        osc.start(t);
+        osc.stop(t + 1.0);
+        break;
+
+      case 'coins':
+        // Arpeggio sound
+        const cNow = t;
+        [880, 1108, 1318].forEach((freq, i) => {
+            const o = this.ctx!.createOscillator();
+            const g = this.ctx!.createGain();
+            o.type = 'sine';
+            o.frequency.value = freq;
+            o.connect(g);
+            g.connect(masterGain);
+            g.gain.setValueAtTime(0.05, cNow + i * 0.05);
+            g.gain.exponentialRampToValueAtTime(0.001, cNow + i * 0.05 + 0.3);
+            o.start(cNow + i * 0.05);
+            o.stop(cNow + i * 0.05 + 0.3);
+        });
         break;
     }
   }

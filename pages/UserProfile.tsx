@@ -14,7 +14,9 @@ import {
     HAIR_COLORS,
     EYE_COLORS,
     DIET_OPTIONS,
-    KIDS_OPTIONS
+    KIDS_OPTIONS,
+    CATEGORIES,
+    KINKS_OPTIONS
 } from '../constants';
 import { 
     User, 
@@ -39,6 +41,16 @@ interface UserProfileProps {
   onUpdateUser: (data: Partial<User>) => void;
   onSignOut?: () => void;
 }
+
+const IdentityHalo = ({ color = 'cyan', mousePos, scrollPos }: { color?: string, mousePos: { x: number, y: number }, scrollPos: number }) => (
+    <div className="absolute inset-[-80px] pointer-events-none opacity-50 z-0 preserve-3d transition-transform duration-1000 ease-out" 
+         style={{ transform: `rotateY(${mousePos.x * 1.5}deg) rotateX(${-mousePos.y * 1.5}deg) translateZ(-60px)` }}>
+        <div className={`absolute inset-0 border-[3px] border-xs-${color} rounded-full animate-spin-slow opacity-10`} style={{ animationDuration: '25s' }}></div>
+        <div className={`absolute inset-12 border-dashed border border-xs-${color} rounded-full animate-spin opacity-30`} style={{ animationDuration: '15s', animationDirection: 'reverse' }}></div>
+        <div className={`absolute inset-24 border border-xs-${color}/20 rounded-full animate-pulse transition-transform duration-500`} 
+             style={{ transform: `translateZ(${80 + scrollPos * 0.05}px)` }}></div>
+    </div>
+);
 
 const MediaGrid = ({ 
     photos, 
@@ -163,6 +175,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [scrollPos, setScrollPos] = useState(0);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isAnthemPlaying, setIsAnthemPlaying] = useState(false);
   const anthemAudioRef = useRef<HTMLAudioElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -205,8 +218,10 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
     intent: member?.intent || user?.intent || [],
     lookingFor: member?.lookingFor || user?.lookingFor || [],
     activities: member?.activities || user?.activities || [],
+    kinks: member?.kinks || user?.kinks || [],
     hosting: member?.hosting || user?.hosting || 'Negotiable',
     role: member?.role || user?.role || SexualRole.VERSE,
+    category: member?.category || user?.category || '',
     photos: member?.photos || user?.photos || [],
     videos: member?.videos || user?.videos || []
   });
@@ -218,9 +233,21 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
         const target = e.target;
         if (target) setScrollPos(target.scrollTop);
     };
+    const handleMouseMove = (e: MouseEvent) => {
+        const x = (e.clientX / window.innerWidth - 0.5) * 2;
+        const y = (e.clientY / window.innerHeight - 0.5) * 2;
+        setMousePos({ x: x * 15, y: y * 15 });
+        document.documentElement.style.setProperty('--user-mx', `${e.clientX}px`);
+        document.documentElement.style.setProperty('--user-my', `${e.clientY}px`);
+    };
+    
     const container = document.querySelector('.overflow-y-auto');
     container?.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container?.removeEventListener('scroll', handleScroll);
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+        container?.removeEventListener('scroll', handleScroll);
+        window.removeEventListener('mousemove', handleMouseMove);
+    };
   }, []);
 
   if (!member && !user) return null; 
@@ -234,8 +261,10 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
       intent: targetUser.intent || [],
       lookingFor: targetUser.lookingFor || [],
       activities: targetUser.activities || [],
+      kinks: targetUser.kinks || [],
       tags: targetUser.tags || [],
-      pronouns: targetUser.pronouns || 'He/Him'
+      pronouns: targetUser.pronouns || 'He/Him',
+      category: targetUser.category || ''
   };
 
   const handleAiEnhance = async () => {
@@ -279,7 +308,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
       soundService.play('trash');
   };
 
-  const toggleList = (item: string, field: 'intent' | 'lookingFor' | 'activities') => {
+  const toggleList = (item: string, field: 'intent' | 'lookingFor' | 'activities' | 'kinks') => {
       soundService.play('click');
       const list = editData[field];
       if (list.includes(item)) setEditData({ ...editData, [field]: list.filter(i => i !== item) });
@@ -402,6 +431,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
 
           <div className="absolute bottom-6 left-6 right-6 flex items-end gap-5 z-20">
               <div className="relative shrink-0 group cursor-pointer">
+                  <IdentityHalo color={isPremium ? 'yellow' : 'cyan'} mousePos={mousePos} scrollPos={scrollPos} />
                   <div className="w-24 h-24 rounded-[2rem] p-1 bg-black/50 backdrop-blur-md border border-white/10 shadow-2xl overflow-hidden relative z-10">
                       <img 
                         src={targetUser.avatarUrl} 
@@ -514,6 +544,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
                   <StatField icon={ICONS.Eye} label="Eyes" value={displayData.eyeColor} fieldName="eyeColor" options={EYE_COLORS} color="cyan" />
                   <StatField icon={ICONS.Droplet} label="Body Hair" value={displayData.bodyHair} fieldName="bodyHair" options={Object.values(BodyHair)} color="cyan" />
                   <StatField icon={ICONS.Scissors} label="Grooming" value={displayData.facialHair} fieldName="facialHair" options={Object.values(FacialHair)} color="cyan" />
+                  <StatField icon={ICONS.Tag} label="Category" value={displayData.category} fieldName="category" options={CATEGORIES} color="cyan" />
               </div>
           </section>
 
@@ -528,7 +559,7 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <StatField icon={ICONS.Target} label="Role" value={displayData.role} fieldName="role" options={Object.values(SexualRole)} color="pink" />
-                  <StatField icon={ICONS.Zap} label="Endowment" value={displayData.endowment} fieldName="endowment" options={['Average', 'Large', 'Extra Large', 'Elite']} color="pink" />
+                  <StatField icon={ICONS.Zap} label="Dick Size" value={displayData.endowment} fieldName="endowment" options={['Average', 'Large', 'Extra Large', 'Elite']} color="pink" />
                   <StatField icon={ICONS.Scissors} label="Dick" value={displayData.dick} fieldName="dick" options={['Cut', 'Uncut']} color="pink" />
                   <StatField icon={ICONS.Activity} label="Dynamics" value={displayData.dynamics} fieldName="dynamics" options={Object.values(PowerDynamics)} color="pink" />
                   <StatField icon={ICONS.ShieldCheck} label="HIV Status" value={displayData.hivStatus} fieldName="hivStatus" options={Object.values(HIVStatus)} color="pink" />
@@ -597,6 +628,14 @@ export default function UserProfile({ user, onUpdateUser, onSignOut }: UserProfi
                               {isEditingProfile ? ACTIVITY_OPTIONS.map(opt => (
                                   <button key={opt} onClick={() => toggleList(opt, 'activities')} className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border transition-all ${editData.activities.includes(opt) ? 'bg-xs-pink text-white border-xs-pink' : 'bg-white/5 text-gray-500 border-white/10'}`}>{opt}</button>
                               )) : displayData.activities.map((i: string) => <span key={i} className="px-3 py-1.5 bg-xs-pink/10 border border-xs-pink/20 rounded-xl text-[9px] font-black text-white uppercase">{i}</span>)}
+                          </div>
+                      </div>
+                      <div>
+                          <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest block mb-2">Kinks</span>
+                          <div className="flex flex-wrap gap-2">
+                              {isEditingProfile ? KINKS_OPTIONS.map(opt => (
+                                  <button key={opt} onClick={() => toggleList(opt, 'kinks')} className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border transition-all ${editData.kinks.includes(opt) ? 'bg-xs-purple text-white border-xs-purple' : 'bg-white/5 text-gray-500 border-white/10'}`}>{opt}</button>
+                              )) : displayData.kinks.map((i: string) => <span key={i} className="px-3 py-1.5 bg-xs-purple/10 border border-xs-purple/20 rounded-xl text-[9px] font-black text-white uppercase">{i}</span>)}
                           </div>
                       </div>
                   </div>
