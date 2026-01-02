@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card3D from '../components/Card3D';
@@ -15,12 +16,15 @@ const Subscription: React.FC<SubscriptionProps> = ({ user, onUpgrade }) => {
   const [selectedPlan, setSelectedPlan] = useState<{ id: SubscriptionTier, price: string, label: string } | null>(null);
   const [processing, setProcessing] = useState(false);
   const [activePaymentMethod, setActivePaymentMethod] = useState<'card' | 'wallet'>('card');
+  const [cancelling, setCancelling] = useState(false);
   
   // Card Form State
   const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvc, setCvc] = useState('');
+
+  const isPremium = user.subscription !== SubscriptionTier.FREE;
 
   const features = [
     { icon: ICONS.Video, text: "Video & Voice Calling" },
@@ -49,7 +53,7 @@ const Subscription: React.FC<SubscriptionProps> = ({ user, onUpgrade }) => {
     setProcessing(true);
     soundService.play('send');
     
-    // Simulate API Latency
+    // Simulate API Latency & Backend Update
     setTimeout(() => {
       setProcessing(false);
       if (selectedPlan) {
@@ -59,6 +63,19 @@ const Subscription: React.FC<SubscriptionProps> = ({ user, onUpgrade }) => {
         navigate('/profile');
       }
     }, 2500);
+  };
+
+  const handleCancelSubscription = () => {
+      if(confirm("Are you sure you want to cancel your Premium benefits? You will lose access at the end of the billing cycle.")) {
+          setCancelling(true);
+          soundService.play('trash');
+          setTimeout(() => {
+              onUpgrade(SubscriptionTier.FREE);
+              setCancelling(false);
+              soundService.play('lock');
+              alert("Subscription canceled. Reverting to free tier.");
+          }, 2000);
+      }
   };
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,7 +96,7 @@ const Subscription: React.FC<SubscriptionProps> = ({ user, onUpgrade }) => {
 
   if (selectedPlan) {
     return (
-      <div className="pb-20 pt-4 px-4 max-w-lg mx-auto">
+      <div className="pt-4 px-4 max-w-lg mx-auto pb-32">
         <button 
           onClick={() => {
               soundService.play('click');
@@ -186,7 +203,7 @@ const Subscription: React.FC<SubscriptionProps> = ({ user, onUpgrade }) => {
              </div>
 
              <button 
-                onClick={() => handlePayment('Credit Card')}
+                onClick={handlePayment('Credit Card')}
                 disabled={processing}
                 className="w-full mt-6 py-4 bg-gradient-to-r from-xs-purple to-xs-pink rounded-xl font-black text-white text-lg shadow-[0_0_20px_rgba(255,0,255,0.4)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
              >
@@ -245,13 +262,38 @@ const Subscription: React.FC<SubscriptionProps> = ({ user, onUpgrade }) => {
   }
 
   return (
-    <div className="pb-10 pt-4">
+    <div className="pt-4 px-4 pb-24">
       <div className="text-center mb-10">
         <h1 className="text-4xl font-black bg-gradient-to-r from-xs-purple via-xs-pink to-xs-yellow bg-clip-text text-transparent mb-4">
           Go Limitless.
         </h1>
         <p className="text-gray-400">Unlock the full [in.xs] experience.</p>
       </div>
+
+      {isPremium && (
+          <div className="mb-10 animate-in zoom-in-95 duration-500">
+              <Card3D className="border border-xs-yellow/50" glowColor="yellow" innerClassName="p-6 bg-gradient-to-r from-xs-yellow/10 to-transparent">
+                  <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                          <div className="p-3 bg-xs-yellow text-black rounded-full shadow-lg shadow-xs-yellow/20">
+                              <ICONS.Star size={24} fill="currentColor" />
+                          </div>
+                          <div>
+                              <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">Premium Active</h3>
+                              <p className="text-xs text-gray-300">You are a rockstar.</p>
+                          </div>
+                      </div>
+                      <button 
+                        onClick={handleCancelSubscription}
+                        disabled={cancelling}
+                        className="px-4 py-2 bg-white/10 hover:bg-red-500/20 text-gray-300 hover:text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/5 hover:border-red-500/30"
+                      >
+                          {cancelling ? 'Cancelling...' : 'Cancel'}
+                      </button>
+                  </div>
+              </Card3D>
+          </div>
+      )}
 
       {/* Features Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
@@ -270,7 +312,7 @@ const Subscription: React.FC<SubscriptionProps> = ({ user, onUpgrade }) => {
         {plans.map((plan) => (
           <Card3D 
             key={plan.id} 
-            className={`relative overflow-hidden cursor-pointer h-24 ${user.subscription === plan.id ? 'border-xs-green' : ''}`}
+            className={`relative overflow-hidden cursor-pointer h-24 ${user.subscription === plan.id ? 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : ''}`}
             glowColor={plan.popular ? 'cyan' : 'purple'}
             onClick={() => {
               if (user.subscription !== plan.id) {
@@ -293,10 +335,10 @@ const Subscription: React.FC<SubscriptionProps> = ({ user, onUpgrade }) => {
                 <span className="text-xl font-bold block leading-tight">{plan.price}</span>
                 {user.subscription === plan.id ? (
                     <span className="text-green-500 text-[10px] font-bold flex items-center justify-end gap-1">
-                        <ICONS.ShieldCheck size={10}/> Active
+                        <ICONS.CheckCircle size={12}/> Current
                     </span>
                 ) : (
-                    <span className="text-xs-pink text-[10px] hover:underline cursor-pointer">Select</span>
+                    <span className="text-xs-pink text-[10px] hover:underline cursor-pointer font-black uppercase tracking-wider">Select</span>
                 )}
               </div>
             </div>

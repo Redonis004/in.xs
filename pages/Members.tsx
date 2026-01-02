@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import Card3D from '../components/Card3D';
 import { ICONS, CATEGORIES } from '../constants';
 import { useNavigate } from 'react-router-dom';
-import { SexualRole } from '../types';
+import { SexualRole, User } from '../types';
 import { soundService } from '../services/soundService';
+import UserProfileModal from '../components/UserProfileModal';
 
 // Mock Data Generator for Members
 const generateMockMembers = (count: number) => {
@@ -18,69 +19,90 @@ const generateMockMembers = (count: number) => {
     avatar: `https://picsum.photos/300/300?random=${i + 200}`,
     isOnline: Math.random() > 0.7,
     isVerified: Math.random() > 0.8,
-    category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)]
+    hosting: Math.random() > 0.6 ? 'Hosting' : 'No',
+    category: CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)],
+    // Add mock media for the modal
+    photos: Array.from({length: 4}, (_, j) => `https://picsum.photos/400/500?random=${i * 10 + j}`),
+    videos: Math.random() > 0.8 ? ['https://www.w3schools.com/html/mov_bbb.mp4'] : [],
+    bio: "Just a digital soul wandering the grid. Into fitness, tech, and good vibes. Hmu if you want to sync."
   }));
 };
 
 // Generate 100 mock members
 const ALL_MEMBERS = generateMockMembers(100);
 
-const CATEGORY_COLORS: Record<string, string> = {
-  "Bear": "from-orange-500/40 to-amber-900/60",
-  "Twink": "from-xs-pink/40 to-purple-900/60",
-  "Otter": "from-emerald-500/40 to-teal-900/60",
-  "Jock": "from-xs-cyan/40 to-blue-900/60",
-  "Leather": "from-gray-600/40 to-black/60",
-  "Queer": "from-xs-purple/40 to-violet-900/60",
-  "Trans": "from-sky-400/40 to-pink-400/40",
-  "Daddy": "from-indigo-500/40 to-slate-900/60",
-  "Black": "from-zinc-700/40 to-black",
-  "White": "from-slate-200/20 to-slate-500/40"
-};
+const FILTER_OPTIONS = [
+    { label: "Online", key: "isOnline", color: "green-500", bgActive: "bg-green-500", textActive: "text-black", textInactive: "text-green-500", borderInactive: "border-green-500" },
+    { label: "Verified", key: "isVerified", color: "xs-cyan", bgActive: "bg-xs-cyan", textActive: "text-black", textInactive: "text-xs-cyan", borderInactive: "border-xs-cyan" },
+    { label: "Hosting", key: "hosting", color: "xs-yellow", bgActive: "bg-xs-yellow", textActive: "text-black", textInactive: "text-xs-yellow", borderInactive: "border-xs-yellow" },
+    { label: "Top", key: "role-Top", color: "xs-purple", bgActive: "bg-xs-purple", textActive: "text-white", textInactive: "text-xs-purple", borderInactive: "border-xs-purple" },
+    { label: "Bottom", key: "role-Bottom", color: "xs-pink", bgActive: "bg-xs-pink", textActive: "text-white", textInactive: "text-xs-pink", borderInactive: "border-xs-pink" },
+    { label: "Verse", key: "role-Verse", color: "blue-400", bgActive: "bg-blue-400", textActive: "text-black", textInactive: "text-blue-400", borderInactive: "border-blue-400" },
+    { label: "Side", key: "role-Side", color: "orange-400", bgActive: "bg-orange-400", textActive: "text-black", textInactive: "text-orange-400", borderInactive: "border-orange-400" },
+];
 
-const ROLE_COLORS: Record<string, string> = {
-    "Top": "border-xs-purple text-xs-purple bg-xs-purple/10",
-    "Bottom": "border-xs-pink text-xs-pink bg-xs-pink/10",
-    "Verse": "border-xs-cyan text-xs-cyan bg-xs-cyan/10",
-    "Side": "border-xs-yellow text-xs-yellow bg-xs-yellow/10",
-    "Verse Top": "border-xs-purple/50 text-xs-purple bg-xs-purple/5",
-    "Verse Bottom": "border-xs-pink/50 text-xs-pink bg-xs-pink/5"
-};
+interface MembersProps {
+    user: User;
+}
 
-const Members: React.FC = () => {
+const Members: React.FC<MembersProps> = ({ user }) => {
   const navigate = useNavigate();
   
   // View State
-  const [displayLimit, setDisplayLimit] = useState(20);
-  const [members, setMembers] = useState(ALL_MEMBERS);
+  const [displayLimit, setDisplayLimit] = useState(18);
+  const [otherMembers, setOtherMembers] = useState(ALL_MEMBERS);
   const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  
+  // Modal State
+  const [selectedMember, setSelectedMember] = useState<any | null>(null);
 
   // Payment State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal'>('card');
   const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvc, setCvc] = useState('');
   const [processingPayment, setProcessingPayment] = useState(false);
 
-  // Settings / Filter State
-  const [filters, setFilters] = useState({
-      onlineOnly: false,
-      verifiedOnly: false,
-      gridSize: 'compact' as 'compact' | 'large',
-      sortBy: 'distance' as 'distance' | 'newest',
-      selectedRoles: [] as string[]
-  });
+  // Construct the "Me" profile object adapting User type to member structure
+  const myProfile = {
+    ...user, // Spread user props
+    id: user.id,
+    username: user.username,
+    age: user.age,
+    role: user.role || 'Verse',
+    distance: '0',
+    location: 'Here',
+    avatar: user.avatarUrl,
+    isOnline: true, 
+    isVerified: user.isVerified,
+    hosting: user.hosting || 'No',
+    category: 'Me',
+    // Ensure photos exist
+    photos: user.photos && user.photos.length > 0 ? user.photos : [user.avatarUrl],
+    videos: user.videos || [],
+    bio: user.bio
+  };
+
+  // Combine user with other members
+  const allMembers = [myProfile, ...otherMembers];
 
   // Apply filters logic
-  const filteredMembers = members.filter(m => {
+  const filteredMembers = allMembers.filter(m => {
       if (searchQuery && !m.username.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      if (selectedCategory && m.category !== selectedCategory) return false;
-      if (filters.onlineOnly && !m.isOnline) return false;
-      if (filters.verifiedOnly && !m.isVerified) return false;
-      if (filters.selectedRoles.length > 0 && !filters.selectedRoles.includes(m.role)) return false;
+      
+      // Check status filters
+      if (activeFilters.includes("Online") && !m.isOnline) return false;
+      if (activeFilters.includes("Verified") && !m.isVerified) return false;
+      if (activeFilters.includes("Hosting") && m.hosting !== 'Hosting') return false;
+
+      // Check role filters - if any role filter is active, member must match at least one
+      const roleFilters = activeFilters.filter(f => ['Top', 'Bottom', 'Verse', 'Side'].includes(f));
+      if (roleFilters.length > 0 && !roleFilters.includes(m.role)) return false;
+
       return true;
   });
 
@@ -90,6 +112,11 @@ const Members: React.FC = () => {
   const handleBoostClick = () => {
     soundService.play('click');
     setShowPaymentModal(true);
+  };
+
+  const handleMemberClick = (member: any) => {
+      soundService.play('click');
+      setSelectedMember(member);
   };
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,8 +135,8 @@ const Members: React.FC = () => {
     setExpiry(value);
   };
 
-  const handlePaymentSubmit = (method: 'card' | 'wallet' = 'card') => {
-    if (method === 'card') {
+  const handlePaymentSubmit = () => {
+    if (paymentMethod === 'card') {
         if (!cardNumber || !expiry || !cvc || !cardName) {
             soundService.play('error');
             alert("Please fill in all card details.");
@@ -120,10 +147,11 @@ const Members: React.FC = () => {
     setProcessingPayment(true);
     soundService.play('send');
 
+    // Simulate secure payment processing
     setTimeout(() => {
         setProcessingPayment(false);
         setShowPaymentModal(false);
-        setDisplayLimit(prev => prev + 10);
+        setDisplayLimit(prev => prev + 18); // Permanent boost for this session
         soundService.play('success');
         setCardName('');
         setCardNumber('');
@@ -132,49 +160,50 @@ const Members: React.FC = () => {
     }, 2000);
   };
 
-  const toggleRoleFilter = (role: string) => {
-      soundService.play('click');
-      setFilters(prev => {
-          const newRoles = prev.selectedRoles.includes(role)
-            ? prev.selectedRoles.filter(r => r !== role)
-            : [...prev.selectedRoles, role];
-          return { ...prev, selectedRoles: newRoles };
-      });
+  const toggleFilter = (filter: string) => {
+    soundService.play('tab');
+    setActiveFilters(prev => 
+        prev.includes(filter) ? prev.filter(f => f !== filter) : [...prev, filter]
+    );
   };
 
-  const handleCategorySelect = (cat: string) => {
-    soundService.play('tab');
-    setSelectedCategory(selectedCategory === cat ? null : cat);
+  const getRoleColor = (role: string) => {
+      switch(role) {
+          case 'Top': return 'purple';
+          case 'Bottom': return 'pink';
+          case 'Verse': return 'cyan';
+          case 'Side': return 'yellow';
+          default: return 'none';
+      }
   };
 
   return (
-    <div className="space-y-6 relative px-4 pt-10">
-      <style>{`
-        .category-tile {
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .category-tile:active {
-            transform: scale(0.9);
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
-        .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-      `}</style>
-      
-      <header className="flex justify-between items-center px-1">
+    <div className="space-y-6 relative px-4 pt-10 min-h-screen">
+      {/* Profile Modal */}
+      <UserProfileModal 
+        isOpen={!!selectedMember} 
+        onClose={() => setSelectedMember(null)} 
+        currentUser={user} 
+        targetUser={selectedMember} 
+      />
+
+      {/* Ambient Backgrounds */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+          <div className="absolute top-20 left-0 w-64 h-64 bg-xs-purple/10 rounded-full blur-[100px] opacity-50"></div>
+          <div className="absolute bottom-40 right-0 w-64 h-64 bg-xs-cyan/10 rounded-full blur-[100px] opacity-50"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-xs-pink/5 rounded-full blur-[120px] opacity-30"></div>
+      </div>
+
+      <header className="flex justify-between items-center px-1 relative z-10">
         <div>
             <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
-              <span className="bg-xs-cyan p-1.5 rounded-lg text-black shadow-[0_0_15px_rgba(0,255,255,0.4)]"><ICONS.Globe size={20} /></span>
-              Grid_Sync
+              <span className="bg-gradient-to-br from-xs-cyan to-blue-500 p-1.5 rounded-xl text-black shadow-[0_0_20px_rgba(0,255,255,0.4)]"><ICONS.Globe size={20} /></span>
+              Networking
             </h1>
         </div>
         
         <div className="flex gap-3">
-            <button onClick={handleBoostClick} className="p-3 bg-xs-yellow/10 border border-xs-yellow/30 text-xs-yellow rounded-2xl hover:bg-xs-yellow/20 transition-all">
+            <button onClick={handleBoostClick} className="p-3 bg-xs-yellow/10 border border-xs-yellow/30 text-xs-yellow rounded-2xl hover:bg-xs-yellow/20 transition-all shadow-[0_0_15px_rgba(249,249,0,0.15)]">
                 <ICONS.Zap size={22} fill="currentColor" />
             </button>
             <button 
@@ -186,33 +215,26 @@ const Members: React.FC = () => {
         </div>
       </header>
 
-      {/* Category Tiles */}
-      <div className="space-y-3">
+      {/* Filter Chips */}
+      <div className="space-y-3 relative z-10">
           <div className="flex items-center justify-between px-2">
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em]">Spectrum_Filters</span>
-              {selectedCategory && (
-                  <button onClick={() => setSelectedCategory(null)} className="text-[9px] font-black text-xs-pink uppercase tracking-widest flex items-center gap-1">
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em]">Filters</span>
+              {activeFilters.length > 0 && (
+                  <button onClick={() => setActiveFilters([])} className="text-[9px] font-black text-xs-pink uppercase tracking-widest flex items-center gap-1">
                       <ICONS.X size={10} /> Clear
                   </button>
               )}
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide px-1">
-            {CATEGORIES.map(cat => {
-                const isActive = selectedCategory === cat;
+          <div className="flex flex-wrap gap-2 px-1">
+            {FILTER_OPTIONS.map(opt => {
+                const isActive = activeFilters.includes(opt.label);
                 return (
                     <button 
-                        key={cat}
-                        onClick={() => handleCategorySelect(cat)}
-                        className={`category-tile flex-shrink-0 group relative w-24 h-24 rounded-[1.8rem] overflow-hidden border-2 transition-all ${isActive ? 'border-white scale-110 shadow-2xl z-10' : 'border-white/5 opacity-70 hover:opacity-100 hover:scale-105'}`}
+                        key={opt.label}
+                        onClick={() => toggleFilter(opt.label)}
+                        className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all duration-300 ${isActive ? `${opt.bgActive} ${opt.textActive} border-transparent shadow-lg scale-105` : `bg-transparent ${opt.textInactive} ${opt.borderInactive} border-opacity-30 hover:bg-white/5`}`}
                     >
-                        <div className={`absolute inset-0 bg-gradient-to-br ${CATEGORY_COLORS[cat] || 'from-gray-500 to-gray-800'}`}></div>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
-                            <span className={`text-[9px] font-black uppercase tracking-tighter text-white drop-shadow-md transition-transform duration-500 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
-                                {cat}
-                            </span>
-                            {isActive && <div className="mt-1 w-1 h-1 bg-white rounded-full animate-ping"></div>}
-                        </div>
-                        <div className="absolute inset-0 border border-white/10 rounded-[1.7rem] pointer-events-none"></div>
+                        {opt.label}
                     </button>
                 );
             })}
@@ -220,30 +242,29 @@ const Members: React.FC = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="relative px-1">
+      <div className="relative px-1 z-10">
         <ICONS.Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
         <input 
             type="text" 
             placeholder="Search identity identifiers..." 
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); soundService.play('typing'); }}
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-6 text-white focus:border-xs-cyan outline-none transition-all placeholder-gray-600 text-sm font-black italic tracking-wide"
+            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-6 text-white focus:border-xs-cyan outline-none transition-all placeholder-gray-600 text-sm font-black italic tracking-wide shadow-inner"
         />
       </div>
 
       {/* Grid Display */}
-      <div className={`grid gap-3 transition-all duration-500 px-1 ${filters.gridSize === 'compact' ? 'grid-cols-3 md:grid-cols-5 lg:grid-cols-6' : 'grid-cols-2 md:grid-cols-4 lg:grid-cols-5'}`}>
-        {visibleMembers.map((member, idx) => (
+      <div className={`grid gap-3 transition-all duration-500 px-1 grid-cols-3 md:grid-cols-5 lg:grid-cols-6 relative z-10`}>
+        {visibleMembers.map((member, idx) => {
+            const isMe = member.id === user.id;
+            return (
             <Card3D 
                 key={member.id} 
-                className={`cursor-pointer group relative ${filters.gridSize === 'compact' ? 'h-40' : 'h-64'}`}
+                className={`cursor-pointer group relative h-40 ${isMe ? 'ring-2 ring-xs-cyan/50 shadow-[0_0_20px_rgba(0,255,255,0.2)]' : ''}`}
                 innerClassName="p-0 border-white/10" 
-                glowColor={member.isOnline ? 'cyan' : 'none'}
+                glowColor={getRoleColor(member.role) as any}
                 hoverZ={60}
-                onClick={() => {
-                    soundService.play('click');
-                    navigate(`/user/${member.id}`, { state: { member } });
-                }}
+                onClick={() => handleMemberClick(member)}
             >
                 <div className="w-full h-full relative overflow-hidden">
                     <img src={member.avatar} alt={member.username} className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-125" />
@@ -256,22 +277,36 @@ const Members: React.FC = () => {
                         {member.isVerified && <ICONS.ShieldCheck size={14} className="text-xs-cyan drop-shadow-[0_0_5px_rgba(0,255,255,0.8)]" />}
                     </div>
 
+                    {isMe && (
+                        <div className="absolute top-2 left-2 bg-xs-cyan text-black text-[7px] font-black uppercase px-1.5 py-0.5 rounded shadow-lg">
+                            YOU
+                        </div>
+                    )}
+
                     <div className="absolute bottom-0 left-0 right-0 p-3">
-                        <h3 className={`font-black text-white italic tracking-tighter leading-none mb-1 group-hover:text-xs-cyan transition-colors ${filters.gridSize === 'compact' ? 'text-xs' : 'text-xl'}`}>
+                        <h3 className={`font-black text-white italic tracking-tighter leading-none mb-1 group-hover:text-xs-cyan transition-colors text-xs truncate`}>
                             {member.username}
                         </h3>
-                        <div className="flex items-center gap-2">
-                             <span className="text-[8px] font-black text-xs-purple/80 uppercase tracking-widest bg-black/40 px-1.5 py-0.5 rounded-lg border border-xs-purple/20">{member.role}</span>
-                             <span className="text-[8px] font-black text-xs-cyan/80 uppercase tracking-widest bg-black/40 px-1.5 py-0.5 rounded-lg border border-xs-cyan/20">{member.distance}mi</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                             <span className={`text-[7px] font-black uppercase tracking-widest bg-black/60 px-1.5 py-0.5 rounded border ${
+                                 member.role === 'Top' ? 'text-xs-purple border-xs-purple/30' : 
+                                 member.role === 'Bottom' ? 'text-xs-pink border-xs-pink/30' : 
+                                 member.role === 'Verse' ? 'text-xs-cyan border-xs-cyan/30' : 'text-xs-yellow border-xs-yellow/30'
+                             }`}>
+                                 {member.role}
+                             </span>
+                             <span className="text-[7px] font-black text-gray-300 uppercase tracking-widest bg-black/60 px-1.5 py-0.5 rounded border border-white/10">
+                                 {isMe ? '0mi' : `${member.distance}mi`}
+                             </span>
                         </div>
                     </div>
                 </div>
             </Card3D>
-        ))}
+        )})}
       </div>
 
       {hasMore && visibleMembers.length > 0 && (
-        <div className="mt-12 relative px-1">
+        <div className="mt-12 relative px-1 pb-10 z-10">
             <div className="flex justify-center z-20">
                 <Card3D 
                     className="w-full max-w-sm mx-auto" 
@@ -281,9 +316,10 @@ const Members: React.FC = () => {
                     <div className="w-16 h-16 bg-xs-yellow rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(249,249,0,0.6)] animate-bounce">
                         <ICONS.Rocket size={36} className="text-black" />
                     </div>
-                    <h3 className="text-3xl font-black text-white italic tracking-tighter uppercase mb-2">Grid Expansion</h3>
-                    <p className="text-gray-500 text-xs mb-8 font-medium leading-relaxed">
-                        Neural limits reached for this cycle. <br/> Upgrade core to see more members.
+                    <h3 className="text-3xl font-black text-white italic tracking-tighter uppercase mb-2">Network Expansion</h3>
+                    <p className="text-gray-400 text-xs mb-8 font-medium leading-relaxed px-2">
+                        To see more profiles, get a boost for an extra 18 profiles.<br/>
+                        <span className="text-xs-pink font-black uppercase tracking-widest">Boosts are permanent.</span>
                     </p>
                     
                     <button 
@@ -291,7 +327,7 @@ const Members: React.FC = () => {
                         className="w-full py-5 bg-gradient-to-r from-xs-yellow via-xs-pink to-xs-purple text-black font-black text-lg rounded-2xl shadow-4xl hover:scale-[1.03] active:scale-95 transition-all flex items-center justify-center gap-3 uppercase tracking-widest"
                     >
                         <ICONS.Zap size={24} fill="currentColor" />
-                        Boost Sync $1.50
+                        Boost $1.50
                     </button>
                 </Card3D>
             </div>
@@ -305,40 +341,56 @@ const Members: React.FC = () => {
                 className="w-full max-w-md bg-xs-dark border border-white/10 rounded-[3rem] p-8 relative animate-in zoom-in-95 duration-300 shadow-4xl"
                 onClick={e => e.stopPropagation()}
               >
-                  <div className="flex justify-between items-center mb-8">
-                      <h3 className="text-3xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
-                          <ICONS.CreditCard size={32} className="text-xs-yellow" /> Sync_Secure
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase flex items-center gap-3">
+                          <ICONS.Zap size={24} className="text-xs-yellow" fill="currentColor" /> Boost_Network
                       </h3>
-                      <button onClick={() => setShowPaymentModal(false)} className="p-3 bg-white/5 rounded-full hover:bg-white/10 text-gray-500"><ICONS.X size={24} /></button>
+                      <button onClick={() => setShowPaymentModal(false)} className="p-3 bg-white/5 rounded-full hover:bg-white/10 text-gray-500"><ICONS.X size={20} /></button>
                   </div>
 
-                  <div className="mb-10 p-6 bg-gradient-to-tr from-xs-purple/20 via-black to-xs-cyan/20 border border-white/10 rounded-[2rem] flex justify-between items-center shadow-xl relative overflow-hidden">
-                      <div className="relative z-10">
-                          <p className="text-white font-black uppercase tracking-widest italic">Expansion Pack</p>
-                          <p className="text-[10px] text-gray-500 font-mono">FRAG_COUNT: 10_NODES</p>
+                  <div className="mb-8 p-6 bg-gradient-to-r from-xs-yellow/10 to-black border border-xs-yellow/30 rounded-[2rem] flex justify-between items-center shadow-lg">
+                      <div>
+                          <p className="text-white font-black uppercase tracking-widest text-sm">Profile_Expansion</p>
+                          <p className="text-[10px] text-gray-400 font-mono mt-1">+18 PERMANENT SLOTS</p>
                       </div>
-                      <p className="text-4xl font-black text-white italic tracking-tighter">$1.50</p>
+                      <p className="text-3xl font-black text-white italic tracking-tighter">$1.50</p>
+                  </div>
+
+                  {/* Payment Methods Tabs */}
+                  <div className="flex bg-white/5 p-1 rounded-2xl mb-6 border border-white/5">
+                     <button 
+                        onClick={() => { setPaymentMethod('card'); soundService.play('tab'); }}
+                        className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${paymentMethod === 'card' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                     >
+                        <ICONS.CreditCard size={14} /> Card
+                     </button>
+                     <button 
+                        onClick={() => { setPaymentMethod('paypal'); soundService.play('tab'); }}
+                        className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${paymentMethod === 'paypal' ? 'bg-[#0070BA] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                     >
+                        <ICONS.MessageCircle size={14} /> PayPal
+                     </button>
                   </div>
 
                   <div className="space-y-6">
-                      <section className="space-y-4">
-                          <div className="space-y-4">
+                      {paymentMethod === 'card' ? (
+                          <div className="space-y-4 animate-in slide-in-from-right-4">
                               <div className="space-y-2 px-1">
-                                  <label className="text-[10px] text-gray-500 uppercase font-black tracking-[0.4em]">Node_Owner</label>
+                                  <label className="text-[10px] text-gray-500 uppercase font-black tracking-[0.4em]">Cardholder</label>
                                   <input 
-                                    type="text" placeholder="IDENTITY NAME" value={cardName}
+                                    type="text" placeholder="NAME ON CARD" value={cardName}
                                     onChange={e => { setCardName(e.target.value); soundService.play('typing'); }}
-                                    className="w-full bg-black/60 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-xs-pink outline-none font-black italic transition-all placeholder-gray-800"
+                                    className="w-full bg-black/60 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-xs-yellow outline-none font-black italic transition-all placeholder-gray-800"
                                   />
                               </div>
                               <div className="space-y-2 px-1">
-                                  <label className="text-[10px] text-gray-500 uppercase font-black tracking-[0.4em]">Credit_String</label>
+                                  <label className="text-[10px] text-gray-500 uppercase font-black tracking-[0.4em]">Number</label>
                                   <div className="relative">
-                                    <ICONS.CreditCard className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-700" size={20} />
+                                    <ICONS.Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-xs-yellow" size={16} />
                                     <input 
                                         type="text" inputMode="numeric" placeholder="0000 0000 0000 0000"
                                         value={cardNumber} onChange={handleCardNumberChange} maxLength={19}
-                                        className="w-full bg-black/60 border border-white/10 rounded-2xl pl-16 pr-6 py-4 text-white focus:border-xs-pink outline-none font-mono transition-all placeholder-gray-800"
+                                        className="w-full bg-black/60 border border-white/10 rounded-2xl pl-16 pr-6 py-4 text-white focus:border-xs-yellow outline-none font-mono transition-all placeholder-gray-800"
                                     />
                                   </div>
                               </div>
@@ -348,7 +400,7 @@ const Members: React.FC = () => {
                                       <input 
                                         type="text" inputMode="numeric" placeholder="MM/YY"
                                         value={expiry} onChange={handleExpiryChange} maxLength={5}
-                                        className="w-full bg-black/60 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-xs-pink outline-none text-center transition-all placeholder-gray-800"
+                                        className="w-full bg-black/60 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-xs-yellow outline-none text-center transition-all placeholder-gray-800"
                                       />
                                   </div>
                                   <div className="space-y-2">
@@ -357,20 +409,46 @@ const Members: React.FC = () => {
                                         type="text" inputMode="numeric" placeholder="000"
                                         value={cvc} onChange={e => { setCvc(e.target.value.replace(/\D/g, '').slice(0, 4)); soundService.play('typing'); }}
                                         maxLength={4}
-                                        className="w-full bg-black/60 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-xs-pink outline-none text-center transition-all placeholder-gray-800"
+                                        className="w-full bg-black/60 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-xs-yellow outline-none text-center transition-all placeholder-gray-800"
                                       />
                                   </div>
                               </div>
                           </div>
+                      ) : (
+                          <div className="py-8 space-y-6 text-center animate-in slide-in-from-right-4">
+                              <p className="text-xs text-gray-400 font-medium">Securely connect your PayPal account to boost instantly.</p>
+                              <button className="w-full py-4 bg-[#FFC439] hover:bg-[#F4B400] rounded-2xl text-[#003087] font-black text-lg italic shadow-lg hover:scale-[1.02] transition-transform">
+                                  PayPal <span className="text-[#009cde] not-italic">Checkout</span>
+                              </button>
+                          </div>
+                      )}
 
-                          <button 
-                            onClick={() => handlePaymentSubmit('card')}
-                            disabled={processingPayment}
-                            className="w-full py-6 bg-gradient-to-r from-xs-purple via-xs-cyan to-xs-pink rounded-[1.8rem] font-black text-black text-xl uppercase tracking-[0.3em] shadow-4xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
-                          >
-                              {processingPayment ? 'Processing_Sync...' : 'Commit Sync'}
-                          </button>
-                      </section>
+                      <button 
+                        onClick={handlePaymentSubmit}
+                        disabled={processingPayment}
+                        className="w-full py-6 bg-white text-black rounded-[1.8rem] font-black text-xl uppercase tracking-[0.3em] shadow-4xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                      >
+                          {processingPayment ? (
+                              <>
+                                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                                Processing...
+                              </>
+                          ) : (
+                              <>
+                                <ICONS.ShieldCheck size={20} />
+                                Secure Pay $1.50
+                              </>
+                          )}
+                      </button>
+                      
+                      <div className="text-center space-y-2 pt-2">
+                          <p className="text-[8px] text-gray-500 font-mono uppercase tracking-widest flex items-center justify-center gap-2">
+                              <ICONS.Lock size={10} /> SSL ENCRYPTED • SECURE TOKENIZATION
+                          </p>
+                          <p className="text-[7px] text-gray-600 font-medium leading-relaxed max-w-xs mx-auto">
+                              Adhering to the Ontario Consumer Protection Act. Digital services provided by in.xs are final sale.
+                          </p>
+                      </div>
                   </div>
               </div>
           </div>

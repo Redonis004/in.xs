@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Card3D from '../components/Card3D';
 import { ICONS, SAMPLE_POSTS } from '../constants';
@@ -13,7 +14,7 @@ const Moderation: React.FC<ModerationProps> = ({ reports, onResolve }) => {
     const navigate = useNavigate();
 
     return (
-        <div className="pb-20">
+        <div className="px-4 pt-10">
             <header className="flex items-center gap-4 mb-8">
                 <button onClick={() => navigate('/profile')} className="p-2 bg-white/10 rounded-full">
                     <ICONS.X size={20} />

@@ -13,7 +13,7 @@ class SoundService {
     }
   }
 
-  play(type: 'click' | 'tab' | 'success' | 'error' | 'send' | 'oink' | 'camera' | 'pop' | 'lock' | 'unlock' | 'typing' | 'scan' | 'trash') {
+  play(type: 'click' | 'tab' | 'success' | 'error' | 'send' | 'oink' | 'camera' | 'pop' | 'lock' | 'unlock' | 'typing' | 'scan' | 'trash' | 'ring' | 'hangup') {
     if (this.muted) return;
     
     this.init();
@@ -165,6 +165,37 @@ class SoundService {
         gain.gain.setValueAtTime(0.1, t);
         gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
         noise.start(t);
+        break;
+
+      case 'ring':
+        // Electronic warble for calling
+        osc.type = 'sine';
+        const now = t;
+        // Pulse 1
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.linearRampToValueAtTime(440, now + 0.4);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0.1, now + 0.4);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        // Pulse 2
+        const now2 = now + 0.6;
+        gain.gain.setValueAtTime(0.1, now2);
+        osc.frequency.setValueAtTime(440, now2);
+        gain.gain.linearRampToValueAtTime(0.1, now2 + 0.8);
+        gain.gain.exponentialRampToValueAtTime(0.001, now2 + 0.9);
+        
+        osc.start(now);
+        osc.stop(now + 1.5);
+        break;
+
+      case 'hangup':
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400, t);
+        osc.frequency.linearRampToValueAtTime(100, t + 0.3);
+        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        osc.start(t);
+        osc.stop(t + 0.3);
         break;
     }
   }

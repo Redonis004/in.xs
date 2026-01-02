@@ -1,14 +1,14 @@
 
 import { 
-  Home, MessageCircle, User, Settings, Camera, Heart, Share2, Lock, Zap, MapPin, Video, Phone, Calendar, ShieldCheck, Sparkles, Menu, X, Flag, AlertTriangle, Trash2, CheckCircle, ShieldAlert, Ruler, Users, Activity, Tag, Dna, Thermometer, ArrowLeft, Mic, MicOff, VideoOff, PhoneOff, Bell, Eye, Flame, Droplets, CreditCard, Wallet, Smartphone, Globe, Play, Rocket, Info, Search, Link, Copy, UserX, Briefcase, GraduationCap, Wine, Cigarette, Leaf, Baby, Volume2, Music, Pause, Pencil, Plus, Droplet, Upload, RefreshCw, Locate, Sparkle, Target, Compass, Dumbbell, Star, History, Edit2, Fingerprint, Edit3, Coffee
+  Home, MessageCircle, User, Settings, Camera, Heart, Share2, Lock, Zap, MapPin, Video, Phone, Calendar, ShieldCheck, Sparkles, Menu, X, Flag, AlertTriangle, Trash2, CheckCircle, Check, ShieldAlert, Ruler, Users, Activity, Tag, Dna, Thermometer, ArrowLeft, Mic, MicOff, VideoOff, PhoneOff, Bell, Eye, Flame, Droplets, CreditCard, Wallet, Smartphone, Globe, Play, Rocket, Info, Search, Link, Copy, UserX, Briefcase, GraduationCap, Wine, Cigarette, Leaf, Baby, Volume2, Music, Pause, Pencil, Plus, Minus, Droplet, Upload, RefreshCw, Locate, Sparkle, Target, Compass, Dumbbell, Star, History, Edit2, Fingerprint, Edit3, Coffee, LogOut, Smile, Send, Bot, CameraOff, Scissors
 } from 'lucide-react';
 
 export const ICONS = {
   Home, MessageCircle, User, Settings, Camera, Heart, Share2, Lock, Zap, MapPin, Video, Phone, Calendar, ShieldCheck, Sparkles, Menu, X,
-  Flag, AlertTriangle, Trash2, CheckCircle, ShieldAlert, Ruler, Users, Activity, Tag, Dna, Thermometer,
+  Flag, AlertTriangle, Trash2, CheckCircle, Check, ShieldAlert, Ruler, Users, Activity, Tag, Dna, Thermometer,
   ArrowLeft, Mic, MicOff, VideoOff, PhoneOff, Bell, Eye, Flame, Droplets,
   CreditCard, Wallet, Smartphone, Globe, Play, Rocket, Info, Search, Link, Copy, UserX,
-  Briefcase, GraduationCap, Wine, Cigarette, Leaf, Baby, Volume2, Music, Pause, Pencil, Plus, Droplet, Upload, RefreshCw, Locate, Sparkle, Target, Compass, Dumbbell, Star, History, Edit2, Fingerprint, Edit3, Coffee
+  Briefcase, GraduationCap, Wine, Cigarette, Leaf, Baby, Volume2, Music, Pause, Pencil, Plus, Minus, Droplet, Upload, RefreshCw, Locate, Sparkle, Target, Compass, Dumbbell, Star, History, Edit2, Fingerprint, Edit3, Coffee, LogOut, Smile, Send, Bot, CameraOff, Scissors
 };
 
 export const APP_LOGO = `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnMSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzAwZmZmZjtzdG9wLW9wYWNpdHk6MSIgLz48c3RvcCBvZmZzZXQ9IjUwJSIgc3R5bGU9InN0b3AtY29sb3I6I2JkMDBmZitzdG9wLW9wYWNpdHk6MSIgLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNmZjAwZmY7c3RvcC1vcGFjaXR5OjEiIC8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMjgiIGZpbGw9IiMwNTA1MDUiLz48ZyBzdHJva2U9InVybCgjZzEpIiBzdHJva2Utd2lkdGg9IjYwIiBzdHJva2UtbGluZWNhcD0icm91bmQiPjxwYXRoIGQ9Ik0xNjAgMTYwTDM1MiAzNTJNMzUyIDE2MEwxNjAgMzUyIi8+PC9nPjxwYXRoIGQ9Ik0xODAgMTgwTDMzMiAzMzJNMzMyIDE4MEwxODAgMzMyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEwIiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==`;
@@ -55,16 +55,50 @@ export const SAMPLE_POSTS = [
   }
 ];
 
+export const SPECIALIZED_ROOMS = [
+  {
+    id: 'r1',
+    name: 'Raw_Breeders',
+    type: 'public',
+    unreadCount: 15,
+    avatar: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=200&auto=format&fit=crop'
+  },
+  {
+    id: 'r2',
+    name: 'Bareback_City',
+    type: 'public',
+    unreadCount: 5,
+    avatar: 'https://images.unsplash.com/photo-1621252179027-94459d27d3ee?q=80&w=200&auto=format&fit=crop'
+  },
+  {
+    id: 'r3',
+    name: 'Seed_Banks',
+    type: 'public',
+    unreadCount: 8,
+    avatar: 'https://images.unsplash.com/photo-1516961642265-531546e84af2?q=80&w=200&auto=format&fit=crop'
+  },
+  {
+    id: 'r4',
+    name: 'Pig_Pen_BB',
+    type: 'public',
+    unreadCount: 42,
+    avatar: 'https://images.unsplash.com/photo-1506096500-087b74ba7130?q=80&w=200&auto=format&fit=crop'
+  }
+];
+
 export const CATEGORIES = ["Bear", "Twink", "Otter", "Jock", "Leather", "Queer", "Trans", "Daddy", "Black", "White"];
-export const BODY_TYPES = ["Average", "Athletic", "Muscular", "Slim", "Swimmer", "Bear", "Otter", "Chub", "Large"];
+export const BODY_TYPES = ["Bear", "Twink", "Otter", "Muscle", "Average", "Chubby", "Slim"];
+export const INTENT_OPTIONS = ["Quick Hookup", "FWB", "Casual", "NSA", "Dating", "Exploring"];
+export const LOOKING_FOR_OPTIONS = ["Guys", "Couples", "Trans"];
+export const ACTIVITY_OPTIONS = ["Cruising", "Party", "Fetish Friendly", "Kinky", "BDSM", "Cuddling", "Gaming", "Hiking"];
 export const HAIR_COLORS = ["Black", "Brown", "Blonde", "Red", "Gray", "White", "Bald", "Dyed", "Other"];
 export const EYE_COLORS = ["Brown", "Blue", "Green", "Hazel", "Gray", "Other"];
 export const DIET_OPTIONS = ["Omnivore", "Vegetarian", "Vegan", "Keto", "Paleo", "Other"];
 export const KIDS_OPTIONS = ["No", "Yes", "Want them", "Maybe", "Don't want them"];
-export const LOOKING_FOR_OPTIONS = ["Sex", "Hook-ups", "FWB", "Anonymity", "Pig", "Nasty Fun", "Dates", "Friends", "Chat", "Right Now"];
 export const CUM_IN_ASS_OPTIONS = ["Feed Me", "Pull Out", "Condoms Only", "Negotiable"];
-export const CUM_IN_MOUTH_OPTIONS = ["Swallow", "Spit", "Snowball", "Not into it"];
+
 export const KINKS_OPTIONS = ["Leather", "Rubber", "Feet", "Armpits", "Bondage", "Roleplay", "Dom/Sub", "Watersports", "Puppy Play", "Fisting", "Spanking", "Public", "Voyeurism", "Exhibitionism"];
+export const PREFERENCE_TAGS = ["Smoking", "Non-smoking", "Drinker", "Non-drinker", "Clean Shaven", "Bearded"];
 export const PRONOUNS_OPTIONS = ["He/Him", "She/Her", "They/Them", "He/They", "She/They", "Other"];
 export const EDUCATION_OPTIONS = ["High School", "College", "University", "Masters", "PhD", "Trade School"];
 export const LIFESTYLE_OPTIONS = ["Never", "Sometimes", "Often", "Socially"];

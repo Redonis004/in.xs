@@ -1,11 +1,9 @@
-import { GoogleGenAI, Modality } from "@google/genai";
+
+import { GoogleGenAI, Modality, Type } from "@google/genai";
 
 // Initialize the API client
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-/**
- * Decodes base64 string to Uint8Array
- */
 export function decodeBase64(base64: string): Uint8Array {
   const binaryString = atob(base64);
   const bytes = new Uint8Array(binaryString.length);
@@ -15,9 +13,6 @@ export function decodeBase64(base64: string): Uint8Array {
   return bytes;
 }
 
-/**
- * Decodes raw PCM data into an AudioBuffer
- */
 export async function decodeAudioData(
   data: Uint8Array,
   ctx: AudioContext,
@@ -37,9 +32,6 @@ export async function decodeAudioData(
   return buffer;
 }
 
-/**
- * Encodes Uint8Array to base64
- */
 export function encodeBase64(bytes: Uint8Array): string {
   let binary = '';
   const len = bytes.byteLength;
@@ -50,8 +42,124 @@ export function encodeBase64(bytes: Uint8Array): string {
 }
 
 /**
- * Generates a response from "Grok Unhinged"
+ * Chat with Gemini 3 Pro for complex reasoning and high-quality responses.
  */
+export const chatWithNeuralPro = async (
+  message: string, 
+  history: { role: string, text: string }[] = [],
+  persona: string = "Assertive"
+): Promise<{ text: string, mapsLinks?: { uri: string, title: string }[] }> => {
+    try {
+        const contents = history.map(h => ({
+            role: h.role === 'user' ? 'user' : 'model',
+            parts: [{ text: h.text }]
+        }));
+        contents.push({ role: 'user', parts: [{ text: message }] });
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-3-pro-preview',
+          contents: contents as any,
+          config: {
+            systemInstruction: `You are 'The Neural Architect', a high-tier intelligence inside [in.xs]. You use gemini-3-pro to provide deep, thoughtful, and high-quality responses. Persona: ${persona}. You help users navigate their digital identities and the physical world. Be concise but insightful. If the user asks for locations or places, you provide useful context.`,
+          },
+        });
+    
+        return { text: response.text || "Neural link stable. ✨" };
+      } catch (error) {
+        console.error("Pro Chat Error:", error);
+        return { text: "System overload at the Pro level. Reverting to basic sync. 💅" };
+      }
+}
+
+/**
+ * Uses Gemini 2.5 Flash with Google Maps tool for location-based queries.
+ */
+export const searchPlacesGrounded = async (
+  query: string,
+  lat?: number,
+  lng?: number
+): Promise<{ text: string, mapsLinks: { uri: string, title: string, snippet?: string }[] }> => {
+    try {
+        const config: any = {
+            tools: [{ googleMaps: {} }],
+        };
+
+        if (lat !== undefined && lng !== undefined) {
+            config.toolConfig = {
+                retrievalConfig: {
+                    latLng: { latitude: lat, longitude: lng }
+                }
+            };
+        }
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: query,
+            config: config,
+        });
+
+        const mapsLinks = response.candidates?.[0]?.groundingMetadata?.groundingChunks
+            ?.filter((chunk: any) => chunk.maps)
+            ?.map((chunk: any) => {
+                const mapData = chunk.maps;
+                return {
+                    uri: mapData.uri,
+                    title: mapData.title || "View on Maps",
+                    snippet: mapData.placeAnswerSources?.reviewSnippets?.[0]?.content
+                };
+            }) || [];
+
+        return {
+            text: response.text || "Location sync completed.",
+            mapsLinks
+        };
+    } catch (error) {
+        console.error("Maps Grounding Error:", error);
+        return { text: "Geospatial data stream interrupted.", mapsLinks: [] };
+    }
+};
+
+/**
+ * Generates a video from an image and prompt using Veo.
+ */
+export const generateMotionVideo = async (
+    imageB64: string,
+    prompt: string,
+    aspectRatio: string = '9:16'
+): Promise<string> => {
+    // Map non-standard ratios to standard ones for Veo 3.1 Fast to ensure API compatibility
+    let safeAspectRatio = aspectRatio;
+    if (aspectRatio === '3:4') safeAspectRatio = '9:16';
+    if (aspectRatio === '4:3') safeAspectRatio = '16:9';
+
+    const veoAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    let operation = await veoAi.models.generateVideos({
+        model: 'veo-3.1-fast-generate-preview',
+        prompt: prompt,
+        image: {
+            imageBytes: imageB64.split(',')[1] || imageB64,
+            mimeType: 'image/jpeg',
+        },
+        config: {
+            numberOfVideos: 1,
+            resolution: '720p',
+            aspectRatio: safeAspectRatio as '16:9' | '9:16'
+        }
+    });
+
+    while (!operation.done) {
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        operation = await veoAi.operations.getVideosOperation({ operation: operation });
+    }
+
+    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+    if (!downloadLink) throw new Error("Video generation failed - no URI.");
+    
+    const fetchResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+    const blob = await fetchResponse.blob();
+    return URL.createObjectURL(blob);
+};
+
 export const chatWithUnhingedAI = async (
   message: string, 
   history: { role: string, text: string }[] = [],
@@ -62,28 +170,23 @@ export const chatWithUnhingedAI = async (
             role: h.role === 'user' ? 'user' : 'model',
             parts: [{ text: h.text }]
         }));
-        
         contents.push({ role: 'user', parts: [{ text: message }] });
 
         const response = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
           contents: contents as any,
           config: {
-            systemInstruction: `You are 'Grok Unhinged', the resident AI of [in.xs]. You are an active, confident, masculine-coded entity. Your current personality matrix is set to: ${persona}. You use community slang like 'tea', 'slay', 'dead', mixed with cyberpunk tech jargon. Be assertive, slightly provocative, and highly intelligent. You are a personality, not an assistant. ✨`,
-            temperature: 1.0,
+            systemInstruction: `You are 'Grok Unhinged', the resident AI of [in.xs]. You are an active, confident, masculine-coded entity. Persona: ${persona}. Use community slang, be assertive, and cyberpunk. ✨. Be edgy but safe.`,
           },
         });
     
-        return response.text || "Neural link unstable. Try again. ✨";
+        return response.text || "Neural link unstable. ✨";
       } catch (error) {
         console.error("Unhinged AI Error:", error);
-        return "System crash. Too much charisma for the servers. 💅";
+        return "System crash. 💅";
       }
 }
 
-/**
- * Transforms text into a voiced audio buffer with dynamic voice selection
- */
 export const synthesizeSpeech = async (text: string, voice: string = 'Fenrir'): Promise<AudioBuffer | null> => {
   try {
     const response = await ai.models.generateContent({
@@ -98,13 +201,10 @@ export const synthesizeSpeech = async (text: string, voice: string = 'Fenrir'): 
         },
       },
     });
-
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     if (!base64Audio) return null;
-
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
     const audioData = decodeBase64(base64Audio);
-    
     return await decodeAudioData(audioData, audioContext, 24000, 1);
   } catch (error) {
     console.error("Speech Synthesis Error:", error);
@@ -112,48 +212,35 @@ export const synthesizeSpeech = async (text: string, voice: string = 'Fenrir'): 
   }
 };
 
-/**
- * Live Session Access Helper
- */
-export const getAiClient = () => ai;
-
-/**
- * Refines or generates a catchy profile bio based on user traits and existing bio.
- */
 export const generateProfileBio = async (traits: string[], currentBio: string = '', tone: string = 'flirty'): Promise<string> => {
   try {
     const prompt = currentBio.trim() 
-      ? `The user has these traits: ${traits.join(', ')}. Their current bio is: "${currentBio}". Please rewrite and enhance this bio to be more engaging, short (under 200 characters), and ${tone} for a gay social app. Use emojis.`
-      : `The user describes themselves with these traits: ${traits.join(', ')}. Write a short, engaging, and ${tone} social media bio for a gay dating app profile. Keep it under 200 characters. Use emojis.`;
+      ? `Traits: ${traits.join(', ')}. Current Bio: "${currentBio}". Rewrite short (<200 char) and ${tone} for a gay social app. Emojis. Make it engaging and authentic.`
+      : `Traits: ${traits.join(', ')}. Write a short, engaging, and ${tone} bio for a gay dating app. <200 char. Emojis.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
-        systemInstruction: `You are an expert profile ghostwriter for [in.xs]. Your goal is to write snappy, attractive, and community-appropriate bios that help users stand out.`,
+        systemInstruction: `Expert profile ghostwriter for [in.xs]. Snappy, attractive, community-appropriate. You speak the language of the modern LGBTQ+ community.`,
       },
     });
-
     return response.text?.trim() || "Ready to explore connections on in.xs!";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return currentBio || "Lover of life, seeker of fun. Welcome to my world.";
+    return currentBio || "Welcome to my world.";
   }
 };
 
-/**
- * Generates an icebreaker for a specific chat context.
- */
 export const generateIcebreaker = async (context: string): Promise<string> => {
     try {
         const response = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
-          contents: `I am chatting with someone interested in: ${context}.`,
+          contents: `Generate a short, playful, and specific icebreaker for someone interested in: ${context}. Keep it under 15 words.`,
           config: {
-            systemInstruction: "Give me a fun, non-creepy icebreaker message to send to someone interested in the context provided. Keep it short and friendly.",
+            systemInstruction: "Fun, short icebreaker for someone interested in the context provided. Short and friendly. Cyberpunk and LGBTQ+ friendly.",
           },
         });
-    
         return response.text || "Hey! How's your day going?";
       } catch (error) {
         console.error("Gemini API Error:", error);

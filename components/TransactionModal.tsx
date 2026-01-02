@@ -12,6 +12,7 @@ interface TransactionModalProps {
   recipientAvatar: string;
   currentBalance: number;
   initialType?: 'send' | 'request';
+  biometricRequired?: boolean;
 }
 
 const TransactionModal: React.FC<TransactionModalProps> = ({ 
@@ -21,7 +22,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   recipientName, 
   recipientAvatar,
   currentBalance,
-  initialType = 'send'
+  initialType = 'send',
+  biometricRequired = false
 }) => {
   const [type, setType] = useState<'send' | 'request' | 'crypto'>(initialType);
   const [amount, setAmount] = useState('');
@@ -60,7 +62,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     }
     if (type === 'send' && num > currentBalance) {
         soundService.play('error');
-        alert("Insufficient Neural Credits in your Vault.");
+        alert("Insufficient credits in your Vault.");
         return;
     }
     soundService.play('click');
@@ -68,9 +70,10 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   };
 
   const handleVerify = () => {
-    soundService.play('unlock');
+    soundService.play('scan');
     setIsVerifying(true);
     
+    // Simulate payment gateway API call & device biometric verification
     setTimeout(() => {
         setIsVerifying(false);
         setStep('success');
@@ -99,7 +102,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                         onClick={() => { setType('send'); soundService.play('tab'); }}
                         className={`flex-1 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${type === 'send' ? 'bg-xs-yellow text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}
                     >
-                        Credits
+                        credits
                     </button>
                     <button 
                         onClick={() => { setType('crypto'); soundService.play('tab'); }}
@@ -121,7 +124,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                     </div>
                     <div>
                         <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-tight">
-                            {type === 'send' ? 'Transfer_Sync' : (type === 'crypto' ? 'Blockchain_Direct' : 'Request_Protocol')}
+                            {type === 'send' ? 'Transfer' : (type === 'crypto' ? 'Blockchain_Direct' : 'Request')}
                         </h3>
                         <p className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.3em]">{type === 'request' ? 'From:' : 'To:'} {recipientName}</p>
                     </div>
@@ -154,7 +157,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                             className={`w-full bg-black/60 border border-white/10 rounded-3xl py-8 pl-14 pr-8 text-white text-5xl font-black italic outline-none focus:border-${mainColor} transition-all placeholder-gray-800 tracking-tighter`}
                         />
                         <div className="absolute bottom-4 right-8 text-[9px] font-mono text-gray-600 uppercase tracking-widest">
-                            {type === 'crypto' ? selectedCoin : 'Neural_Credits'}
+                            {type === 'crypto' ? selectedCoin : 'credits'}
                         </div>
                     </div>
 
@@ -177,14 +180,14 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                         type="text"
                         value={note}
                         onChange={(e) => { setNote(e.target.value); soundService.play('typing'); }}
-                        placeholder={`Add ${type} memo (optional)...`}
+                        placeholder={`Add memo / Bill splitting note...`}
                         className="w-full bg-black/40 border border-white/5 rounded-2xl p-5 text-gray-300 italic outline-none focus:border-xs-purple transition-all text-sm placeholder-gray-700"
                     />
                 </div>
 
                 {type === 'send' && (
                     <div className="flex justify-between items-center px-4">
-                        <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Available Credits</span>
+                        <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Available Reserves</span>
                         <span className="text-sm font-black text-white italic">${currentBalance.toFixed(2)}</span>
                     </div>
                 )}
@@ -193,7 +196,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                     onClick={handleNext}
                     className={`w-full py-6 bg-${mainColor} text-${type === 'crypto' ? 'white' : 'black'} rounded-3xl font-black text-xl uppercase tracking-[0.4em] shadow-4xl hover:scale-[1.02] active:scale-95 transition-all`}
                 >
-                    Review {type === 'crypto' ? 'Chain_Sync' : 'Protocol'}
+                    Review
                 </button>
             </div>
         )}
@@ -201,39 +204,39 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         {step === 'verify' && (
             <div className="space-y-10 py-4 animate-in zoom-in-95 duration-500">
                 <div className="text-center space-y-2">
-                    <h3 className="text-3xl font-black text-white italic tracking-tighter uppercase">Identity_Confirm</h3>
+                    <h3 className="text-3xl font-black text-white italic tracking-tighter uppercase">Device_Auth</h3>
                     <p className="text-xs text-gray-500 font-medium tracking-wide">
-                        {type === 'crypto' ? `Sending ${amount} ${selectedCoin} to ${recipientName}` : (type === 'send' ? `Syncing $${amount} to ${recipientName}` : `Requesting $${amount} from ${recipientName}`)}
+                        {biometricRequired ? 'Face ID / Fingerprint Required' : `Confirming ${type === 'crypto' ? `${amount} ${selectedCoin}` : `$${amount}`} via Secure Node`}
                     </p>
                 </div>
 
                 <div className="relative w-48 h-48 mx-auto flex items-center justify-center">
-                    <div className={`absolute inset-0 border-4 rounded-full transition-all duration-1000 ${isVerifying ? `border-${mainColor} animate-spin-slow` : 'border-white/10'}`}></div>
+                    <div className={`absolute inset-0 border-4 rounded-full transition-all duration-1000 ${isVerifying ? `border-${mainColor} animate-spin-slow shadow-[0_0_20px_rgba(0,255,255,0.4)]` : 'border-white/10'}`}></div>
                     <div className={`absolute inset-4 border-2 border-dashed rounded-full transition-all duration-1000 ${isVerifying ? 'border-xs-purple animate-spin-slow scale-110 opacity-60' : 'border-white/5 opacity-20'}`} style={{animationDirection: 'reverse'}}></div>
                     
                     <button 
                         onClick={handleVerify}
                         disabled={isVerifying}
-                        className={`w-32 h-32 rounded-full flex flex-col items-center justify-center gap-2 transition-all ${isVerifying ? `bg-${mainColor}/20 scale-110` : 'bg-white/5 hover:bg-white/10 hover:scale-105'}`}
+                        className={`w-32 h-32 rounded-full flex flex-col items-center justify-center gap-2 transition-all group ${isVerifying ? `bg-${mainColor}/20 scale-110` : 'bg-white/5 hover:bg-white/10 hover:scale-105 border border-white/5'}`}
                     >
                         {isVerifying ? (
                             <ICONS.ShieldCheck size={40} className={`text-${mainColor} animate-pulse`} />
                         ) : (
                             <>
-                                <ICONS.Locate size={32} className="text-gray-400" />
-                                <span className="text-[8px] font-black uppercase text-gray-500 tracking-widest">Sync_Bio</span>
+                                <ICONS.Fingerprint size={32} className="text-gray-400 group-hover:text-xs-cyan transition-colors" />
+                                <span className="text-[8px] font-black uppercase text-gray-500 tracking-widest">Confirm</span>
                             </>
                         )}
                     </button>
                 </div>
 
                 <p className="text-center text-[9px] text-gray-600 uppercase font-mono tracking-[0.2em] animate-pulse">
-                    {isVerifying ? 'Broadcasting_to_Ledger...' : 'Awaiting_Biometric_Pulse'}
+                    {isVerifying ? 'Verifying_Neural_Handshake...' : 'Awaiting_Biometric_Confirmation'}
                 </p>
 
                 {!isVerifying && (
                     <button onClick={() => setStep('input')} className="w-full py-4 text-gray-500 text-[10px] font-black uppercase tracking-[0.4em] hover:text-white transition-all">
-                        Edit_Parameters
+                        Cancel_Link
                     </button>
                 )}
             </div>
@@ -241,30 +244,33 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
         {step === 'success' && (
             <div className="space-y-10 py-4 animate-in zoom-in-95 duration-700">
-                <div className={`w-24 h-24 mx-auto bg-${type === 'send' || type === 'crypto' ? 'green-500' : 'xs-cyan'} rounded-full flex items-center justify-center shadow-4xl animate-heart-burst`}>
+                <div className={`w-24 h-24 mx-auto bg-green-500 rounded-full flex items-center justify-center shadow-4xl animate-bounce`}>
                     <ICONS.CheckCircle size={48} className="text-black" />
                 </div>
                 
                 <div className="text-center space-y-4">
                     <h3 className="text-4xl font-black text-white italic tracking-tighter uppercase">
-                        {type === 'crypto' ? 'Direct_Linked' : (type === 'send' ? 'Sync_Linked' : 'Request_Sent')}
+                        {type === 'crypto' ? 'Ledger_Sync' : (type === 'send' ? 'Reserves_Linked' : 'Request_Active')}
                     </h3>
                     <div className={`p-6 bg-black/40 rounded-3xl border border-${mainColor}/20`}>
-                        <p className="text-xs text-gray-500 uppercase font-black tracking-widest mb-1">
-                            {type === 'crypto' ? 'Ledger Entry Confirmed' : (type === 'send' ? 'Transfer Complete' : 'Network Request Open')}
+                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">
+                            {type === 'crypto' ? 'Chain Verification Successful' : (type === 'send' ? 'Transaction Authorized' : 'Request Broadcast')}
                         </p>
                         <p className={`text-5xl font-black text-${mainColor} italic tracking-tighter`}>
                             {type === 'crypto' ? '' : '$'}{amount}{type === 'crypto' ? ` ${selectedCoin}` : ''}
                         </p>
                     </div>
-                    <p className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.2em]">Hash: {Math.random().toString(36).substr(2, 16).toUpperCase()}</p>
+                    <div className="flex flex-col items-center gap-1">
+                        <p className="text-[9px] text-gray-500 font-mono uppercase tracking-[0.2em]">SYNC_ID: {Math.random().toString(36).substr(2, 10).toUpperCase()}</p>
+                        <p className="text-[8px] text-gray-700 font-mono uppercase">Node_Protocol: SECURE_V2</p>
+                    </div>
                 </div>
 
                 <button 
                     onClick={onClose}
                     className="w-full py-6 bg-white text-black rounded-3xl font-black text-xl uppercase tracking-[0.4em] shadow-4xl active:scale-95 transition-all"
                 >
-                    Close_Link
+                    Close_Vault
                 </button>
             </div>
         )}

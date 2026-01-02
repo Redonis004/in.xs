@@ -7,14 +7,15 @@ export enum SubscriptionTier {
 }
 
 export enum Ethnicity {
-  BLACK = 'Black',
   WHITE = 'White',
+  BLACK = 'Black',
   ASIAN = 'Asian',
-  INDIAN = 'Indian',
-  MIXED = 'Mixed',
-  NATIVE_INDIAN = 'Native Indian',
   LATINO = 'Latino',
   MIDDLE_EASTERN = 'Middle Eastern',
+  SOUTH_ASIAN = 'South Asian',
+  MIXED = 'Mixed',
+  NATIVE_AMERICAN = 'Native American',
+  PACIFIC_ISLANDER = 'Pacific Islander',
   OTHER = 'Other',
   NO_RESPONSE = 'No Response'
 }
@@ -26,30 +27,31 @@ export enum SexualRole {
   VERSE_TOP = 'Verse Top',
   VERSE_BOTTOM = 'Verse Bottom',
   SIDE = 'Side',
+  SWITCH = 'Switch',
   NO_RESPONSE = 'No Response'
 }
 
 export enum SexualPreference {
   BAREBACK = 'Bareback',
-  ON_PREP = 'On PrEP',
-  NEEDS_DISCUSSION = 'Needs Discussion',
+  ON_PREP_BB = 'On PrEP BB',
   NO_RESPONSE = 'No Response'
 }
 
 export enum HIVStatus {
-  NEGATIVE = 'Negative',
-  POSITIVE = 'Positive',
   UNDETECTABLE = 'Undetectable',
-  ON_PREP = 'Negative (On PrEP)',
+  POZ = 'Poz',
+  NEG = 'Neg',
+  UNKNOWN = 'Unknown',
   NO_RESPONSE = 'No Response'
 }
 
 export enum RelationshipStatus {
   SINGLE = 'Single',
-  TAKEN = 'Taken',
-  OPEN = 'Open Relationship',
-  DATING = 'Dating',
+  PARTNERED = 'Partnered',
   MARRIED = 'Married',
+  OPEN_RELATIONSHIP = 'Open Relationship',
+  DIVORCED = 'Divorced',
+  WIDOWED = 'Widowed',
   NO_RESPONSE = 'No Response'
 }
 
@@ -69,15 +71,47 @@ export enum EducationLevel {
   NO_RESPONSE = 'No Response'
 }
 
+export enum BodyHair {
+  SHAVED = 'Shaved',
+  SMOOTH = 'Smooth',
+  SOME_HAIR = 'Some Hair',
+  BEAR = 'Bear'
+}
+
+export enum FacialHair {
+  CLEAN = 'Clean Shaven',
+  STUBBLE = 'Stubble',
+  BEARD = 'Beard',
+  MUSTACHE = 'Mustache',
+  GOATEE = 'Goatee'
+}
+
+export enum PowerDynamics {
+  DOMINANT = 'Dominant',
+  SUBMISSIVE = 'Submissive',
+  SWITCH = 'Switch',
+  NEUTRAL = 'Neutral'
+}
+
+export enum CumPreference {
+  INSIDE = 'Cum Inside',
+  OUTSIDE = 'Cum Outside',
+  DONT_CARE = "Don't Care"
+}
+
+export type UserStatus = 'online' | 'offline' | 'busy' | 'away';
+
 export interface User {
   id: string;
   username: string;
+  password?: string; 
   age: number;
   height?: string;
   weight?: string;
   bio: string;
   avatarUrl: string;
   bannerUrl?: string;
+  status?: UserStatus;
   
   // Demographics & Identity
   ethnicity?: Ethnicity;
@@ -87,6 +121,25 @@ export interface User {
   hairColor?: string;
   eyeColor?: string;
   category?: string; 
+  
+  // Grooming Spec
+  bodyHair?: BodyHair;
+  facialHair?: FacialHair;
+  
+  // Sexual Profile (Hookup Relevant)
+  role?: SexualRole;
+  dynamics?: PowerDynamics;
+  sexualPreference?: SexualPreference;
+  hivStatus?: HIVStatus;
+  lastTested?: string;
+  kinks: string[];
+  activities: string[];
+  intent: string[];
+  cumInAss?: CumPreference;
+  cumInMouth?: string;
+  hosting?: 'Yes' | 'No' | 'Negotiable' | 'Traveling';
+  endowment?: 'Average' | 'Large' | 'Extra Large' | 'Elite';
+  dick?: 'Cut' | 'Uncut';
   
   // Lifestyle & Social
   smoking?: LifestyleChoice;
@@ -98,21 +151,13 @@ export interface User {
   kids?: string;
   lookingFor?: string[];
   
-  // Sexual Profile
-  role?: SexualRole;
-  sexualPreference?: SexualPreference;
-  hivStatus?: HIVStatus;
-  lastTested?: string;
-  kinks: string[];
-  cumInAss?: string;
-  cumInMouth?: string;
-  
   // App Props
   isVerified: boolean;
   isModerator?: boolean;
   subscription: SubscriptionTier;
   location?: { lat: number; lng: number; name?: string };
   walletBalance: number;
+  isBiometricEnabled?: boolean;
   
   // Content
   photos: string[];
@@ -139,11 +184,16 @@ export interface Post {
   userId: string;
   username: string;
   userAvatar: string;
+  userStatus?: UserStatus;
   content: string;
-  imageUrl?: string; // Legacy support
-  audioUrl?: string; // Legacy support
-  media?: MediaItem[]; // New multi-media support
+  imageUrl?: string; 
+  audioUrl?: string; 
+  location?: string; 
+  locationCoords?: { lat: number; lng: number };
+  liveLocationExpiry?: number; 
+  media?: MediaItem[]; 
   likes: number;
+  reactions?: Record<string, number>;
   timestamp: number;
   isLiked: boolean;
   comments: Comment[];
@@ -156,6 +206,10 @@ export interface Message {
   imageUrl?: string;
   videoUrl?: string;
   audioUrl?: string;
+  albumUrls?: string[]; 
+  replyToId?: string; 
+  location?: { lat: number; lng: number; label?: string };
+  liveLocationExpiry?: number; 
   transferAmount?: number;
   transferType?: 'send' | 'request' | 'crypto';
   timestamp: number;
@@ -166,11 +220,12 @@ export interface Message {
 export interface ChatRoom {
   id: string;
   name: string;
-  type: 'private' | 'group' | 'specialized';
+  type: 'private' | 'group' | 'specialized' | 'public';
   category?: string;
-  participants: User[];
+  participants?: User[];
   lastMessage?: string;
   unreadCount: number;
+  avatar: string;
 }
 
 export interface Report {
